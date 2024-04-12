@@ -1,0 +1,16 @@
+
+pandas
+numpy
+transformers
+sentence_transformers
+timeit
+scikit-learn
+tqdm
+datasets
+nltk
+scipy
+empath
+gensim
+keras
+tensorflow
+matplotlib
