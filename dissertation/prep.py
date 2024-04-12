@@ -6,6 +6,11 @@ from sklearn.utils import resample
 from tqdm import tqdm
 import gc
 from datasets import Dataset
+from nltk.corpus import stopwords
+import nltk
+
+nltk.download('stopwords')
+nltk.download('punkt')
 
 def concatenate_responses(df):
     df['Response'] = df['open_ended_1'] + df['open_ended_2'] + \
@@ -223,11 +228,10 @@ def prepare_transformer_data(train, valid, test):
 
 
 def prepare_all_data(df):
-#hard coded validation data for fitting ensemble
+    #hard coded validation data for fitting ensemble
+    train, valid, test, y_train_list, y_val_list, y_test_list = prepare_train_test_data(df)
+    bow_x_train, bow_x_test = prepare_bow(train, valid)
+    empath_x_train, empath_x_test = prepare_empath(train, valid)
+    bert_train_list, bert_val_list, bert_test_list = prepare_transformer_data(train, valid, test)
 
-train, valid, test, y_train_list, y_val_list, y_test_list = prepare_train_test_data(df)
-bow_x_train, bow_x_test = prepare_bow(train, valid)
-empath_x_train, empath_x_test = prepare_empath(train, valid)
-bert_train_list, bert_val_list, bert_test_list = prepare_transformer_data(train, valid, test)
-
-return bow_x_train, bow_x_test, empath_x_train, empath_x_test, bert_train_list, bert_val_list, bert_test_list, train, valid, test, y_train_list, y_val_list, y_test_list
+    return bow_x_train, bow_x_test, empath_x_train, empath_x_test, bert_train_list, bert_val_list, bert_test_list, train, valid, test, y_train_list, y_val_list, y_test_list

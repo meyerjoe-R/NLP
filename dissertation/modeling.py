@@ -13,6 +13,7 @@ from scipy.stats import pearsonr
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import ConvergenceWarning
 import warnings
+import time
 import joblib
 
 from empath import Empath
@@ -45,7 +46,6 @@ import torch
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 
-nltk.download('stopwords')
 nlp = en_core_web_md.load()
 
 config = {
@@ -56,7 +56,8 @@ config = {
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-def transformer(model, tokenizer, train_dataset, test_dataset, construct, max_length = 4096, num_layers_to_freeze = 0, freeze = False):
+def transformer(model, tokenizer, train_dataset, test_dataset, construct,
+                max_length = 4096, num_layers_to_freeze = 0, freeze = False):
 
   def tokenize_function(examples, tokenizer):
       return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=max_length)
@@ -176,7 +177,7 @@ def prepare_transformer_data(train, valid, test):
   return bert_train_list, bert_val_list, bert_test_list
 
 
-def train_test_lstm(df, y_train_list, y_test_list):
+def train_test_lstm(df, y_train_list, y_test_list, embedding_dim = 300):
 
   print('Preparing lstm...')
 
@@ -193,7 +194,6 @@ def train_test_lstm(df, y_train_list, y_test_list):
 
     return text
 
-  embedding_dim = 300
 
   results = Counter()
 
