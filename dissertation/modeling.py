@@ -1,70 +1,67 @@
-from sklearn.feature_extraction.text import CountVectorizer
-import scipy.sparse
-from pandas import DataFrame
-import sklearn
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import ElasticNet
-import sklearn.metrics as metrics
-from scipy.stats import pearsonr
-from sklearn.exceptions import ConvergenceWarning
-from sklearn.exceptions import ConvergenceWarning
-import warnings
-import time
-import joblib
-
-from empath import Empath
-import gensim.downloader as api
-from keras.layers import Bidirectional
-from keras import layers
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Embedding
-from keras.preprocessing import sequence
-from keras.utils import pad_sequences
-from keras.preprocessing.text import Tokenizer
-from keras.layers import Dropout
-import tensorflow as tf
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import RandomizedSearchCV
-from tensorflow.keras import regularizers
-from scipy import stats
-import matplotlib.pyplot as plt
 import re
-import numpy as np
-import nltk
+import time
+import warnings
 from collections import Counter
-import en_core_web_md
-from transformers import TrainingArguments, AutoTokenizer, AutoModelForSequenceClassification
-from transformers import Trainer
-import torch
 
+import en_core_web_md
+import gensim.downloader as api
+import joblib
+import matplotlib.pyplot as plt
+import nltk
+import numpy as np
+import pandas as pd
+import scipy.sparse
+import sklearn
+import sklearn.metrics as metrics
+import tensorflow as tf
+import torch
+from empath import Empath
+from keras import layers
+from keras.layers import LSTM, Bidirectional, Dense, Dropout, Embedding
+from keras.models import Sequential
+from keras.preprocessing import sequence
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+from pandas import DataFrame
+from scipy import stats
+from scipy.stats import pearsonr
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.exceptions import ConvergenceWarning
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import ElasticNet
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
+from sklearn.pipeline import Pipeline
+from tensorflow.keras import regularizers
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
 
 nlp = en_core_web_md.load()
 
 config = {
-
-    'model': "google/bigbird-roberta-base",
-    'tokenizer': "google/bigbird-roberta-base"
+    'model': 'google/bigbird-roberta-base',
+    'tokenizer': 'google/bigbird-roberta-base'
 }
 
-warnings.filterwarnings("ignore", category=ConvergenceWarning)
+warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
-def transformer(model, tokenizer, train_dataset, test_dataset, construct,
-                max_length = 4096, num_layers_to_freeze = 0, freeze = False):
 
-  def tokenize_function(examples, tokenizer):
-      return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=max_length)
+def transformer(model,
+                tokenizer,
+                train_dataset,
+                test_dataset,
+                construct,
+                max_length=4096,
+                num_layers_to_freeze=0,
+                freeze=False):
+    def tokenize_function(examples, tokenizer):
+        return tokenizer(examples['text'],
+                         padding='max_length',
+                         truncation=True,
+                         max_length=max_length)
 
-  def compute_metrics(eval_preds):
-
-    """
+    def compute_metrics(eval_preds):
+        """
     Compute correlation
 
     Args:
@@ -73,245 +70,328 @@ def transformer(model, tokenizer, train_dataset, test_dataset, construct,
     Returns:
         dict: Dictionary containing the computed metrics.
     """
-    preds, labels = eval_preds.predictions, eval_preds.label_ids
-    preds = np.squeeze(preds)  # Remove unnecessary dimensions
+        preds, labels = eval_preds.predictions, eval_preds.label_ids
+        preds = np.squeeze(preds)  # Remove unnecessary dimensions
 
-    # Calculate Pearson correlation coefficient
-    correlation = np.corrcoef(preds, labels)[0, 1]
+        # Calculate Pearson correlation coefficient
+        correlation = np.corrcoef(preds, labels)[0, 1]
 
-    # Return the metrics as a dictionary
-    return {
-        'correlation': correlation,
-    }
+        # Return the metrics as a dictionary
+        return {
+            'correlation': correlation,
+        }
 
-  train_dataset = Dataset.from_pandas(train_dataset)
-  test_dataset = Dataset.from_pandas(test_dataset)
+    train_dataset = Dataset.from_pandas(train_dataset)
+    test_dataset = Dataset.from_pandas(test_dataset)
 
-  tokenizer = AutoTokenizer.from_pretrained(tokenizer)
-  model = AutoModelForSequenceClassification.from_pretrained(model, num_labels=1)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+    model = AutoModelForSequenceClassification.from_pretrained(model,
+                                                               num_labels=1)
 
-  if freeze or num_layers_to_freeze > 0:
-    # Freeze the specified number of layers
-    for layer_idx in range(num_layers_to_freeze):
-        for param in model.bert.encoder.layer[layer_idx].parameters():
-            param.requires_grad = False
+    if freeze or num_layers_to_freeze > 0:
+        # Freeze the specified number of layers
+        for layer_idx in range(num_layers_to_freeze):
+            for param in model.bert.encoder.layer[layer_idx].parameters():
+                param.requires_grad = False
 
-    num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Number of trainable parameters: {num_trainable_params}")
+        num_trainable_params = sum(p.numel() for p in model.parameters()
+                                   if p.requires_grad)
+        print(f'Number of trainable parameters: {num_trainable_params}')
 
-  train_dataset = train_dataset.map(
-    lambda examples: tokenize_function(examples, tokenizer),
-    batched=True,
-    remove_columns=["text"],
-  )
+    train_dataset = train_dataset.map(
+        lambda examples: tokenize_function(examples, tokenizer),
+        batched=True,
+        remove_columns=['text'],
+    )
 
-  test_dataset = test_dataset.map(
-      lambda examples: tokenize_function(examples, tokenizer),
-      batched=True,
-      remove_columns=["text"],
-  )
+    test_dataset = test_dataset.map(
+        lambda examples: tokenize_function(examples, tokenizer),
+        batched=True,
+        remove_columns=['text'],
+    )
 
-  # Define Trainer
-  training_args = TrainingArguments(
-      output_dir='./results',
-      do_eval = False,
-      save_total_limit=2,
-      learning_rate=2e-5,
-      gradient_accumulation_steps=4,
-      per_device_train_batch_size=2,
-      per_device_eval_batch_size=8,
-      num_train_epochs=5,
-      fp16 = True,
-      logging_dir='./logs',
-  )
+    # Define Trainer
+    training_args = TrainingArguments(
+        output_dir='./results',
+        do_eval=False,
+        save_total_limit=2,
+        learning_rate=2e-5,
+        gradient_accumulation_steps=4,
+        per_device_train_batch_size=2,
+        per_device_eval_batch_size=8,
+        num_train_epochs=5,
+        fp16=True,
+        logging_dir='./logs',
+    )
 
-  trainer = Trainer(
-      model=model,
-      args=training_args,
-      train_dataset=train_dataset,
-      compute_metrics = compute_metrics
-  )
+    trainer = Trainer(model=model,
+                      args=training_args,
+                      train_dataset=train_dataset,
+                      compute_metrics=compute_metrics)
 
-  # Train the model
-  trainer.train()
+    # Train the model
+    trainer.train()
 
-  model.save_pretrained(f"/content/drive/MyDrive/Dissertation II/Models/{construct}")
+    model.save_pretrained(
+        f'/content/drive/MyDrive/Dissertation II/Models/{construct}')
 
-  # Get predictions on the test set
-  test_predictions = trainer.predict(test_dataset)
+    # Get predictions on the test set
+    test_predictions = trainer.predict(test_dataset)
 
-  # Extract the predicted labels (adjust the key based on your output)
-  y_pred = test_predictions.predictions.squeeze()
+    # Extract the predicted labels (adjust the key based on your output)
+    y_pred = test_predictions.predictions.squeeze()
 
-  del model
+    del model
 
-  return y_pred
+    return y_pred
 
 
 def prepare_transformer_data(train, valid, test):
 
-  #prepare train data
-  e_bert_train_df = train[['Response', 'E_Scale_score']].rename(columns = {'Response' : 'text', 'E_Scale_score': 'labels'})
-  a_bert_train_df = train[['Response', 'A_Scale_score']].rename(columns = {'Response' : 'text', 'A_Scale_score': 'labels'})
-  o_bert_train_df = train[['Response', 'O_Scale_score']].rename(columns = {'Response' : 'text', 'O_Scale_score': 'labels'})
-  c_bert_train_df = train[['Response', 'C_Scale_score']].rename(columns = {'Response' : 'text', 'C_Scale_score': 'labels'})
-  n_bert_train_df = train[['Response', 'N_Scale_score']].rename(columns = {'Response' : 'text', 'N_Scale_score': 'labels'})
-  bert_train_list = [e_bert_train_df, a_bert_train_df, o_bert_train_df, c_bert_train_df, n_bert_train_df]
+    #prepare train data
+    e_bert_train_df = train[['Response',
+                             'E_Scale_score']].rename(columns={
+                                 'Response': 'text',
+                                 'E_Scale_score': 'labels'
+                             })
+    a_bert_train_df = train[['Response',
+                             'A_Scale_score']].rename(columns={
+                                 'Response': 'text',
+                                 'A_Scale_score': 'labels'
+                             })
+    o_bert_train_df = train[['Response',
+                             'O_Scale_score']].rename(columns={
+                                 'Response': 'text',
+                                 'O_Scale_score': 'labels'
+                             })
+    c_bert_train_df = train[['Response',
+                             'C_Scale_score']].rename(columns={
+                                 'Response': 'text',
+                                 'C_Scale_score': 'labels'
+                             })
+    n_bert_train_df = train[['Response',
+                             'N_Scale_score']].rename(columns={
+                                 'Response': 'text',
+                                 'N_Scale_score': 'labels'
+                             })
+    bert_train_list = [
+        e_bert_train_df, a_bert_train_df, o_bert_train_df, c_bert_train_df,
+        n_bert_train_df
+    ]
 
-  #prepare train data
-  e_bert_val_df = valid[['Response', 'E_Scale_score']].rename(columns = {'Response' : 'text', 'E_Scale_score': 'labels'})
-  a_bert_val_df = valid[['Response', 'A_Scale_score']].rename(columns = {'Response' : 'text', 'A_Scale_score': 'labels'})
-  o_bert_val_df = valid[['Response', 'O_Scale_score']].rename(columns = {'Response' : 'text', 'O_Scale_score': 'labels'})
-  c_bert_val_df = valid[['Response', 'C_Scale_score']].rename(columns = {'Response' : 'text', 'C_Scale_score': 'labels'})
-  n_bert_val_df = valid[['Response', 'N_Scale_score']].rename(columns = {'Response' : 'text', 'N_Scale_score': 'labels'})
-  bert_val_list = [e_bert_val_df, a_bert_val_df, o_bert_val_df, c_bert_val_df, n_bert_val_df]
+    #prepare train data
+    e_bert_val_df = valid[['Response',
+                           'E_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'E_Scale_score': 'labels'
+                           })
+    a_bert_val_df = valid[['Response',
+                           'A_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'A_Scale_score': 'labels'
+                           })
+    o_bert_val_df = valid[['Response',
+                           'O_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'O_Scale_score': 'labels'
+                           })
+    c_bert_val_df = valid[['Response',
+                           'C_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'C_Scale_score': 'labels'
+                           })
+    n_bert_val_df = valid[['Response',
+                           'N_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'N_Scale_score': 'labels'
+                           })
+    bert_val_list = [
+        e_bert_val_df, a_bert_val_df, o_bert_val_df, c_bert_val_df,
+        n_bert_val_df
+    ]
 
-  e_bert_test_df = test[['Response', 'E_Scale_score']].rename(columns = {'Response' : 'text', 'E_Scale_score': 'labels'})
-  a_bert_test_df = test[['Response', 'A_Scale_score']].rename(columns = {'Response' : 'text', 'A_Scale_score': 'labels'})
-  o_bert_test_df = test[['Response', 'O_Scale_score']].rename(columns = {'Response' : 'text', 'O_Scale_score': 'labels'})
-  c_bert_test_df = test[['Response', 'C_Scale_score']].rename(columns = {'Response' : 'text', 'C_Scale_score': 'labels'})
-  n_bert_test_df = test[['Response', 'N_Scale_score']].rename(columns = {'Response' : 'text', 'N_Scale_score': 'labels'})
+    e_bert_test_df = test[['Response',
+                           'E_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'E_Scale_score': 'labels'
+                           })
+    a_bert_test_df = test[['Response',
+                           'A_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'A_Scale_score': 'labels'
+                           })
+    o_bert_test_df = test[['Response',
+                           'O_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'O_Scale_score': 'labels'
+                           })
+    c_bert_test_df = test[['Response',
+                           'C_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'C_Scale_score': 'labels'
+                           })
+    n_bert_test_df = test[['Response',
+                           'N_Scale_score']].rename(columns={
+                               'Response': 'text',
+                               'N_Scale_score': 'labels'
+                           })
 
-  bert_test_list = [e_bert_test_df, a_bert_test_df, o_bert_test_df, c_bert_test_df, n_bert_test_df]
+    bert_test_list = [
+        e_bert_test_df, a_bert_test_df, o_bert_test_df, c_bert_test_df,
+        n_bert_test_df
+    ]
 
-  return bert_train_list, bert_val_list, bert_test_list
+    return bert_train_list, bert_val_list, bert_test_list
 
 
-def train_test_lstm(df, y_train_list, y_test_list, embedding_dim = 300):
+def train_test_lstm(df, y_train_list, y_test_list, embedding_dim=300):
 
-  print('Preparing lstm...')
+    print('Preparing lstm...')
 
-  def clean_text2(text):
-    """
+    def clean_text2(text):
+        """
     1. Lowercases text
     2. Removes punctuation
     3. Removes numbers
 
     """
-    text = text.lower()
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = "".join([i for i in text if not i.isdigit()])
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', ' ', text)
+        text = ''.join([i for i in text if not i.isdigit()])
 
-    return text
+        return text
+
+    results = Counter()
+
+    df['lstm_text'] = df['Response'].apply(clean_text2)
+    lstm_train = df.loc[df.Dataset == 'Train']
+    lstm_test = df.loc[df.Dataset == 'Dev']
+    lstm_x_train = lstm_train['lstm_text']
+    lstm_x_test = lstm_test['lstm_text']
+
+    df['lstm_text'].str.lower().str.split().apply(results.update)
+    print(f'length of results: {len(results)}')
+
+    #set vocabulary size and embedding size
+    voc_size = len(results)
+
+    #check for longest length for padding purposes
+    list = [x for x in df['lstm_text']]
+    longest = max(list, key=len)
+    max_length = len(longest)
+    print(f' max length is: {max_length}')
+
+    #unique responses
+    unique = set([x for x in df['lstm_text']])
+    print(f'length of unique: {len(unique)}')
+
+    #tokenize
+    tokenizer = Tokenizer(num_words=voc_size)
+    tokenizer.fit_on_texts(lstm_x_train)
+
+    #pad
+    sequences = tokenizer.texts_to_sequences(lstm_x_train.values)
+    lstm_x_train = pad_sequences(sequences, maxlen=max_length)
+
+    print(f'x_train shape is : {lstm_x_train.shape}')
+
+    #tokenize
+    tokenizer.fit_on_texts(lstm_x_test)
+
+    #pad
+    test_sequences = tokenizer.texts_to_sequences(lstm_x_test.values)
+    lstm_x_test = pad_sequences(test_sequences, maxlen=max_length)
+
+    print(f'x_test shape is : {lstm_x_test.shape}')
+
+    #embeddings
+    embedding_matrix = np.zeros((voc_size, embedding_dim))
+
+    for i, word in enumerate(tokenizer.word_index):
+        embedding_matrix[i] = nlp(word).vector
+
+    #Load the embedding matrix as the weights matrix for the embedding layer and set trainable to False
+    Embedding_layer = Embedding(input_dim=voc_size,
+                                output_dim=embedding_dim,
+                                weights=[embedding_matrix],
+                                input_length=max_length,
+                                trainable=False)
+    model = Sequential()
+    model.add(Embedding_layer)
+    model.add(LSTM(300))
+    model.add(Dropout(0.2))
+    model.add(Dense(1, activation='linear'))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+
+    print(model.summary())
+
+    cor = []
+    results = {}
+
+    for i in range(0, len(y_train_list)):
+
+        construct = y_train_list[i].name
+        history = model.fit(lstm_x_train,
+                            y_train_list[i],
+                            epochs=2,
+                            batch_size=32,
+                            validation_split=0.1)
+        y_pred = model.predict(lstm_x_test)
+
+        print()
+        print('Training Performance')
+        print('=======================================')
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'val'], loc='upper left')
+        plt.show()
+        print('\n Results Below')
+        print('=======================================')
+
+        y_flat = y_pred.flatten()
+        r = stats.pearsonr(y_test_list[i], y_flat)
+        print('r: ', round(r[0], 4))
+        cor.append(r)
+        results[construct] = y_pred
+
+        # Save the model
+        model.save(
+            f'/content/drive/MyDrive/Dissertation II/Models/{construct}.h5')
+        print('model saved..')
+
+    return results, lstm_x_test
 
 
-  results = Counter()
-
-  df['lstm_text'] = df['Response'].apply(clean_text2)
-  lstm_train = df.loc[df.Dataset == 'Train']
-  lstm_test = df.loc[df.Dataset == 'Dev']
-  lstm_x_train = lstm_train['lstm_text']
-  lstm_x_test = lstm_test['lstm_text']
-
-  df['lstm_text'].str.lower().str.split().apply(results.update)
-  print(f'length of results: {len(results)}')
-
-  #set vocabulary size and embedding size
-  voc_size = len(results)
-
-  #check for longest length for padding purposes
-  list = [x for x in df['lstm_text']]
-  longest = max(list, key = len)
-  max_length = len(longest)
-  print(f' max length is: {max_length}')
-
-  #unique responses
-  unique = set([x for x in df['lstm_text']])
-  print(f'length of unique: {len(unique)}')
-
-  #tokenize
-  tokenizer = Tokenizer(num_words=voc_size)
-  tokenizer.fit_on_texts(lstm_x_train)
-
-  #pad
-  sequences = tokenizer.texts_to_sequences(lstm_x_train.values)
-  lstm_x_train = pad_sequences(sequences,maxlen=max_length)
-
-  print(f'x_train shape is : {lstm_x_train.shape}')
-
-  #tokenize
-  tokenizer.fit_on_texts(lstm_x_test)
-
-  #pad
-  test_sequences = tokenizer.texts_to_sequences(lstm_x_test.values)
-  lstm_x_test = pad_sequences(test_sequences,maxlen=max_length)
-
-  print(f'x_test shape is : {lstm_x_test.shape}')
-
-  #embeddings
-  embedding_matrix = np.zeros((voc_size, embedding_dim))
-
-  for i, word in enumerate(tokenizer.word_index):
-    embedding_matrix[i] = nlp(word).vector
-
-  #Load the embedding matrix as the weights matrix for the embedding layer and set trainable to False
-  Embedding_layer= Embedding(input_dim = voc_size, output_dim = embedding_dim,
-  weights = [embedding_matrix],
-  input_length = max_length,
-  trainable=False)
-  model = Sequential()
-  model.add(Embedding_layer)
-  model.add(LSTM(300))
-  model.add(Dropout(0.2))
-  model.add(Dense(1, activation='linear'))
-  model.compile(loss = 'mean_squared_error', optimizer='adam')
-
-  print(model.summary())
-
-  cor = []
-  results = {}
-
-  for i in range(0, len(y_train_list)):
-
-    construct = y_train_list[i].name
-    history = model.fit(lstm_x_train, y_train_list[i], epochs=2, batch_size = 32, validation_split = 0.1)
-    y_pred = model.predict(lstm_x_test)
-
-    print()
-    print('Training Performance')
-    print('=======================================')
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'val'], loc='upper left')
-    plt.show()
-    print('\n Results Below')
-    print('=======================================')
-
-    y_flat = y_pred.flatten()
-    r = stats.pearsonr(y_test_list[i], y_flat)
-    print('r: ', round(r[0],4))
-    cor.append(r)
-    results[construct] = y_pred
-
-    # Save the model
-    model.save(f"/content/drive/MyDrive/Dissertation II/Models/{construct}.h5")
-    print('model saved..')
-
-  return results, lstm_x_test
-
-
-def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test, paramater_grid, cv, score, method):
+def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
+                                      paramater_grid, cv, score, method):
 
     global frame
 
     #start timer
     start = time.time()
 
-    print('\n Performing grid search....hold tight... \n =============================')
+    print(
+        '\n Performing grid search....hold tight... \n ============================='
+    )
 
     model_name = model
     construct = y_test.name
 
-    path = f"/content/drive/MyDrive/Dissertation II/Models/{method}/{construct}.pkl"
+    path = f'/content/drive/MyDrive/Dissertation II/Models/{method}/{construct}.pkl'
 
     ###### grid search
 
     #construct grid search
     #number of parameter settings set to 60
-    gs = RandomizedSearchCV(model, param_distributions = paramater_grid, scoring = score, 
-                            cv = cv, n_iter = 60, random_state = 152, n_jobs = -1)
+    gs = RandomizedSearchCV(model,
+                            param_distributions=paramater_grid,
+                            scoring=score,
+                            cv=cv,
+                            n_iter=60,
+                            random_state=152,
+                            n_jobs=-1)
 
     #fit on training data
     gs.fit(x_train, y_train)
@@ -347,7 +427,8 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test, p
 
     # mse=metrics.mean_squared_error(y_test, y_pred)
     # print('MSE: ', round(mse,4))
-    print(f"length of y_test: {len(y_test)}....length of y_pred: {len(y_pred)}")
+    print(
+        f'length of y_test: {len(y_test)}....length of y_pred: {len(y_pred)}')
     r = pearsonr(y_test, y_pred)
     print('r: ', r)
 
@@ -358,7 +439,8 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test, p
 
     #results data frame
 
-    frame = pd.DataFrame([[construct, method, model_name, r[0]]],columns=['construct', 'method', 'model_name', 'r'])
+    frame = pd.DataFrame([[construct, method, model_name, r[0]]],
+                         columns=['construct', 'method', 'model_name', 'r'])
 
     end = time.time()
 
@@ -369,24 +451,31 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test, p
     print('\n \n \n Analysis Complete')
 
     return frame, r[0], y_pred, construct
-  
-def train_test_loop_baseline(models, param_grids, x_train, y_train_list, x_test, y_test_list, method):
 
-  dfs = []
-  results = {}
 
-  for i in tqdm(range(0, len(y_train_list))):
-    frame, r, y_pred, construct = regression_grid_train_test_report(enet, x_train, y_train_list[i], x_test, y_test_list[i], enet_param_grid, 10, 'explained_variance', method)
-    dfs.append(frame)
+def train_test_loop_baseline(models, param_grids, x_train, y_train_list,
+                             x_test, y_test_list, method):
 
-  output = pd.concat(dfs)
+    dfs = []
+    results = {}
 
-  results['output'] = output
-  results[construct] = y_pred
+    for model in models:
+        for i in tqdm(range(0, len(y_train_list))):
+            frame, r, y_pred, construct = regression_grid_train_test_report(
+                model, x_train, y_train_list[i], x_test, y_test_list[i],
+                param_grids[model], 10, 'explained_variance', method)
+            dfs.append(frame)
 
-  return results
+    output = pd.concat(dfs)
 
-def multi_transformer(train_datasets: list, test_datasets: list, model, tokenizer):
+    results['output'] = output
+    results[construct] = y_pred
+
+    return results
+
+
+def multi_transformer(train_datasets: list, test_datasets: list, model,
+                      tokenizer):
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -398,37 +487,48 @@ def multi_transformer(train_datasets: list, test_datasets: list, model, tokenize
         y_pred = transformer(model, tokenizer, train, test, construct)
         torch.cuda.empty_cache()
         results[construct] = y_pred
-        counter +=1
+        counter += 1
 
     return results
 
-def train_train_test_multi_transformer(config, bert_train_list, bert_test_list):
+
+def train_train_test_multi_transformer(config, bert_train_list,
+                                       bert_test_list):
 
     torch.cuda.empty_cache()
 
-    results = multi_transformer(bert_train_list, bert_test_list, config['model'],  config['model'])
+    results = multi_transformer(bert_train_list, bert_test_list,
+                                config['model'], config['model'])
 
     return results
 
 
 def train_transformer():
 
-  # bow = train_test_loop_baseline(enet, enet_param_grid, bow_x_train, y_train_list, bow_x_test, y_test_list, 'bow')
-  # empath = train_test_loop_baseline(enet, enet_param_grid, empath_x_train, y_train_list, empath_x_test, y_val_list, 'empath')
-  # lstm = train_test_lstm(df, y_train_list, y_val_list)
-  transformer = train_train_test_multi_transformer(config, bert_train_list, bert_val_list)
-  result_list = [bow or None, empath or None, lstm or None, transformer or None]
-  # Filter out the Nones, keeping only the existing variable
-  result_list = [x for x in result_list if x is not None]
-  return result_list
+    # bow = train_test_loop_baseline(enet, enet_param_grid, bow_x_train, y_train_list, bow_x_test, y_test_list, 'bow')
+    # empath = train_test_loop_baseline(enet, enet_param_grid, empath_x_train, y_train_list, empath_x_test, y_val_list, 'empath')
+    # lstm = train_test_lstm(df, y_train_list, y_val_list)
+    transformer = train_train_test_multi_transformer(config, bert_train_list,
+                                                     bert_val_list)
+    result_list = [
+        bow or None, empath or None, lstm or None, transformer or None
+    ]
+    # Filter out the Nones, keeping only the existing variable
+    result_list = [x for x in result_list if x is not None]
+    return result_list
+
 
 def train_ml():
 
-  bow = train_test_loop_baseline(enet, enet_param_grid, bow_x_train, y_train_list, bow_x_test, y_val_list, 'bow')
-  empath = train_test_loop_baseline(enet, enet_param_grid, empath_x_train, y_train_list, empath_x_test, y_val_list, 'empath')
-  lstm = train_test_lstm(df, y_train_list, y_val_list)
-  result_list = [bow, empath, lstm]
-  return result_list
+    bow = train_test_loop_baseline(enet, enet_param_grid, bow_x_train,
+                                   y_train_list, bow_x_test, y_val_list, 'bow')
+    empath = train_test_loop_baseline(enet, enet_param_grid, empath_x_train,
+                                      y_train_list, empath_x_test, y_val_list,
+                                      'empath')
+    lstm = train_test_lstm(df, y_train_list, y_val_list)
+    result_list = [bow, empath, lstm]
+    return result_list
+
 
 def ml_predict(path, x_test):
 
@@ -440,15 +540,21 @@ def ml_predict(path, x_test):
 
     return y_pred
 
+
 def lstm_predict(path, x_test):
 
-  loaded_model = load_model(path)
-  y_pred = loaded_model.predict(x_test)
-  return y_pred
+    loaded_model = load_model(path)
+    y_pred = loaded_model.predict(x_test)
+    return y_pred
+
 
 from tqdm import tqdm
 
-def transformer_predict(path, x_test, batch_size = 4, tokenizer = 'google/bigbird-roberta-base'):
+
+def transformer_predict(path,
+                        x_test,
+                        batch_size=4,
+                        tokenizer='google/bigbird-roberta-base'):
 
     # Load the pretrained model and tokenizer
     model = AutoModelForSequenceClassification.from_pretrained(path).to('cuda')
@@ -457,10 +563,14 @@ def transformer_predict(path, x_test, batch_size = 4, tokenizer = 'google/bigbir
     predictions = []
 
     for i in tqdm(range(0, len(x_test), batch_size)):
-        batch_texts = x_test[i:i+batch_size]
+        batch_texts = x_test[i:i + batch_size]
 
         # Tokenize the input texts in batch
-        inputs = tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True, max_length = 4096).to('cuda')
+        inputs = tokenizer(batch_texts,
+                           return_tensors='pt',
+                           padding=True,
+                           truncation=True,
+                           max_length=4096).to('cuda')
 
         # Make predictions using the loaded model
         outputs = model(**inputs)
@@ -471,52 +581,58 @@ def transformer_predict(path, x_test, batch_size = 4, tokenizer = 'google/bigbir
 
         predictions.extend(batch_predictions)
 
-      del model
+    del model
 
     return np.array(predictions)
-  
-  
+
+
 def get_all_model_paths(path):
-  return os.lisdir(path)
+    return os.lisdir(path)
 
-def all_ml_predictions(root_path, x_test, method, root = '/content/drive/MyDrive/Dissertation II/Models/'):
 
-  paths = os.listdir(root_path)
+def all_ml_predictions(root_path,
+                       x_test,
+                       method,
+                       root='/content/drive/MyDrive/Dissertation II/Models/'):
 
-  predictions = {}
+    paths = os.listdir(root_path)
 
-  #eacon
-  for path in paths:
-    preds = ml_predict(f"{root}{method}/{path}", x_test)
-    construct = path.split('_')[0]
-    predictions[construct] = preds
+    predictions = {}
 
-  return predictions
+    #eacon
+    for path in paths:
+        preds = ml_predict(f'{root}{method}/{path}', x_test)
+        construct = path.split('_')[0]
+        predictions[construct] = preds
 
-def all_lstm_predictions(root_path, x_test, method = 'lstm'):
+    return predictions
 
-  paths = os.listdir(root_path)
 
-  predictions = {}
+def all_lstm_predictions(root_path, x_test, method='lstm'):
 
-  #eacon
-  for path in paths:
-    preds = lstm_predict(f"{root}{method}/{path}", x_test)
-    construct = path.split('_')[0]
-    predictions[construct] = preds
+    paths = os.listdir(root_path)
 
-  return predictions
+    predictions = {}
 
-def all_transformer_predictions(root_path, x_test, method = 'transformer'):
+    #eacon
+    for path in paths:
+        preds = lstm_predict(f'{root}{method}/{path}', x_test)
+        construct = path.split('_')[0]
+        predictions[construct] = preds
 
-  paths = os.listdir(root_path)
+    return predictions
 
-  predictions = {}
 
-  #eacon
-  for path in paths:
-    print(path)
-    preds = transformer_predict(f"{root}{method}/{path}", x_test)
-    predictions[path] = preds
+def all_transformer_predictions(root_path, x_test, method='transformer'):
 
-  return predictions
+    paths = os.listdir(root_path)
+
+    predictions = {}
+
+    #eacon
+    for path in paths:
+        print(path)
+        preds = transformer_predict(f'{root}{method}/{path}', x_test)
+        predictions[path] = preds
+
+    return predictions
