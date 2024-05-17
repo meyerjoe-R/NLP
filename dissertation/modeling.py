@@ -2,7 +2,9 @@ import re
 import time
 import warnings
 from collections import Counter
-
+from datasets import Dataset
+import os
+from tqdm import tqdm
 import en_core_web_md
 import gensim.downloader as api
 import joblib
@@ -37,11 +39,6 @@ from tensorflow.keras import regularizers
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
 
 nlp = en_core_web_md.load()
-
-config = {
-    'model': 'google/bigbird-roberta-base',
-    'tokenizer': 'google/bigbird-roberta-base'
-}
 
 warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
@@ -518,17 +515,12 @@ def train_transformer():
     return result_list
 
 
-def train_ml():
+def train_ml(model, param_grid, x_train, y_train_list, x_test, y_val_list):
 
-    bow = train_test_loop_baseline(enet, enet_param_grid, bow_x_train,
-                                   y_train_list, bow_x_test, y_val_list, 'bow')
-    empath = train_test_loop_baseline(enet, enet_param_grid, empath_x_train,
-                                      y_train_list, empath_x_test, y_val_list,
-                                      'empath')
-    lstm = train_test_lstm(df, y_train_list, y_val_list)
-    result_list = [bow, empath, lstm]
-    return result_list
-
+    result = train_test_loop_baseline(model, param_grid, x_train,
+                                   y_train_list, x_test, y_val_list, 'bow')
+    
+    return result
 
 def ml_predict(path, x_test):
 
@@ -546,9 +538,6 @@ def lstm_predict(path, x_test):
     loaded_model = load_model(path)
     y_pred = loaded_model.predict(x_test)
     return y_pred
-
-
-from tqdm import tqdm
 
 
 def transformer_predict(path,

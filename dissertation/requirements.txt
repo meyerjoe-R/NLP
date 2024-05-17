@@ -3,7 +3,6 @@ pandas
 numpy
 transformers
 sentence_transformers
-timeit
 scikit-learn
 tqdm
 datasets
