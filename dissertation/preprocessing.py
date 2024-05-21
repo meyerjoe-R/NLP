@@ -63,66 +63,82 @@ def prepare_train_test_data(df):
     return train, valid, test, y_train_list, y_val_list, y_test_list
 
 
-def prepare_bow(train, test):
+def prepare_bow(train, valid, test):
 
-  print('Preparing bow...')
+    print('Preparing bow...')
 
-  train['Cleaned_response'] = train['Response'].apply(clean_text)
-  test['Cleaned_response'] = test['Response'].apply(clean_text)
+    train['Cleaned_response'] = train['Response'].apply(clean_text)
+    valid['Cleaned_response'] = valid['Response'].apply(clean_text)
+    test['Cleaned_response'] = test['Response'].apply(clean_text)
 
-  train_documents = [x for x in train['Cleaned_response']]
-  test_documents = [x for x in test['Cleaned_response']]
+    train_documents = [x for x in train['Cleaned_response']]
+    valid_documents = [x for x in valid['Cleaned_response']]
+    test_documents = [x for x in test['Cleaned_response']]
   
-  vectorizer = CountVectorizer(ngram_range = (1,1))
-  bow_x_train = pd.DataFrame.sparse.from_spmatrix(vectorizer.fit_transform(train_documents))
-  bow_x_test = pd.DataFrame.sparse.from_spmatrix(vectorizer.transform(test_documents))
+    vectorizer = CountVectorizer(ngram_range=(1,1))
+    bow_x_train = pd.DataFrame.sparse.from_spmatrix(vectorizer.fit_transform(train_documents))
+    bow_x_valid = pd.DataFrame.sparse.from_spmatrix(vectorizer.transform(valid_documents))
+    bow_x_test = pd.DataFrame.sparse.from_spmatrix(vectorizer.transform(test_documents))
   
-  print(f"length of x train for bow is: {len(bow_x_train)}")
-  print(f"length of x test for bow is: {len(bow_x_test)}")
-  print(bow_x_train.head())
-  print(bow_x_test.head())
-  return bow_x_train, bow_x_test
+    print(f"Length of x train for bow is: {len(bow_x_train)}")
+    print(f"Length of x valid for bow is: {len(bow_x_valid)}")
+    print(f"Length of x test for bow is: {len(bow_x_test)}")
+    print(bow_x_train.head())
+    print(bow_x_valid.head())
+    print(bow_x_test.head())
+    
+    return bow_x_train, bow_x_valid, bow_x_test
 
-def prepare_empath(train, test):
 
-  print('Preparing empath...')
-  list_of_empath_train = []
-  list_of_empath_test = []
+def prepare_empath(train, valid, test):
 
-  train['Cleaned_response'] = train['Response'].apply(clean_text)
-  test['Cleaned_response'] = test['Response'].apply(clean_text)
-  
-  lexicon = Empath()
-  empath_x_train_list = [x for x in train['Cleaned_response']]
-  empath_x_test_list = [x for x in test['Cleaned_response']]
+    print('Preparing empath...')
+    list_of_empath_train = []
+    list_of_empath_valid = []
+    list_of_empath_test = []
 
-  for x in empath_x_train_list:
-      empath = lexicon.analyze(x)
-      list_of_empath_train.append(empath)
+    train['Cleaned_response'] = train['Response'].apply(clean_text)
+    valid['Cleaned_response'] = valid['Response'].apply(clean_text)
+    test['Cleaned_response'] = test['Response'].apply(clean_text)
+    
+    lexicon = Empath()
+    empath_x_train_list = [x for x in train['Cleaned_response']]
+    empath_x_valid_list = [x for x in valid['Cleaned_response']]
+    empath_x_test_list = [x for x in test['Cleaned_response']]
 
-  for x in empath_x_test_list:
-    empath = lexicon.analyze(x)
-    list_of_empath_test.append(empath)
+    for x in empath_x_train_list:
+        empath = lexicon.analyze(x)
+        list_of_empath_train.append(empath)
 
-  empath_x_train = pd.DataFrame(list_of_empath_train)
-  empath_x_test = pd.DataFrame(list_of_empath_test)
-  print(empath_x_train.head())
-  return empath_x_train, empath_x_test
+    for x in empath_x_valid_list:
+        empath = lexicon.analyze(x)
+        list_of_empath_valid.append(empath)
+    
+    for x in empath_x_test_list:
+        empath = lexicon.analyze(x)
+        list_of_empath_test.append(empath)
 
-def prepare_ml_data(path, prepare_valid = True):
+    empath_x_train = pd.DataFrame(list_of_empath_train)
+    empath_x_valid = pd.DataFrame(list_of_empath_valid)
+    empath_x_test = pd.DataFrame(list_of_empath_test)
+
+    print(empath_x_train.head())
+    print(empath_x_valid.head())
+    print(empath_x_test.head())
+    
+    return empath_x_train, empath_x_valid, empath_x_test
+
+
+def prepare_ml_data(path):
     
     # load data and concatenate repsonses
     df = pd.read_csv(path)
     df = concatenate_responses(df)
     
     train, valid, test, y_train_list, y_val_list, y_test_list = prepare_train_test_data(df)
-
-    if prepare_valid:
-        # treat validation data as test data, x_test will be from validation set
-        test = valid
     
-    empath_x_train, empath_x_test = prepare_empath(train, test)
-    bow_x_train, bow_x_test = prepare_bow(train, test)
+    empath_x_train, empath_x_valid, empath_x_test = prepare_empath(train, valid, test)
+    bow_x_train,bow_x_valid, bow_x_test = prepare_bow(train, valid, test)
     
     return {
         'df': df,
@@ -133,8 +149,10 @@ def prepare_ml_data(path, prepare_valid = True):
         'y_val_list': y_val_list,
         'y_test_list': y_test_list,
         'empath_x_train': empath_x_train,
+        'empath_x_valid': empath_x_valid,
         'empath_x_test': empath_x_test,
         'bow_x_train': bow_x_train,
+        'bow_x_valid': bow_x_valid,
         'bow_x_test': bow_x_test
     }
     

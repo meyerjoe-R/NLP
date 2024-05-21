@@ -4,7 +4,7 @@ import gc
 import numpy as np
 import torch
 from datasets import Dataset
-from transformers import (AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments)
+from transformers import (AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments, EarlyStoppingCallback)
 from tqdm import tqdm
 
 def prepare_transformer_data(train, valid, test):
@@ -22,12 +22,11 @@ def prepare_transformer_data(train, valid, test):
 def transformer(model,
                 tokenizer,
                 train_dataset,
+                valid_dataset,
                 test_dataset,
-                construct,
                 max_length=4096,
                 num_layers_to_freeze=0,
-                freeze=False,
-                prediction_dir = ''):
+                freeze=False):
     
     def tokenize_function(examples, tokenizer):
         return tokenizer(examples['text'],
@@ -78,6 +77,12 @@ def transformer(model,
         batched=True,
         remove_columns=['text'],
     )
+    
+    valid_dataset = valid_dataset.map(
+        lambda examples: tokenize_function(examples, tokenizer),
+        batched=True,
+        remove_columns=['text'],
+    )
 
     test_dataset = test_dataset.map(
         lambda examples: tokenize_function(examples, tokenizer),
@@ -92,33 +97,34 @@ def transformer(model,
         save_total_limit=2,
         learning_rate=2e-5,
         gradient_accumulation_steps=4,
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=4,
         per_device_eval_batch_size=8,
-        num_train_epochs=5,
+        num_train_epochs=3,
         fp16=True,
-        logging_dir='./logs',
-    )
+        logging_dir='./logs')
 
     trainer = Trainer(model=model,
                       args=training_args,
                       train_dataset=train_dataset,
-                      compute_metrics=compute_metrics)
+                      eval_dataset=valid_dataset,
+                      compute_metrics=compute_metrics,
+                      callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
+)
 
     # Train the model
     trainer.train()
 
-    model.save_pretrained(
-        f'/content/drive/MyDrive/Dissertation II/Models/{construct}')
-
     # Get predictions on the test set
     test_predictions = trainer.predict(test_dataset)
+    valid_predictions = trainer.predict(valid_dataset)
 
     # Extract the predicted labels (adjust the key based on your output)
-    y_pred = test_predictions.predictions.squeeze()
+    y_pred_test = test_predictions.predictions.squeeze()
+    y_pred_val = valid_predictions.predictions.squeeze()
 
     del model
 
-    return y_pred
+    return {'y_pred_test': y_pred_test, 'y_pred_val': y_pred_val}
 
 
 def multi_transformer(train_datasets: list, test_datasets: list, model,
@@ -137,39 +143,6 @@ def multi_transformer(train_datasets: list, test_datasets: list, model,
         counter += 1
 
     return results
-
-
-def train_train_test_multi_transformer(config, bert_train_list,
-                                       bert_test_list):
-
-    torch.cuda.empty_cache()
-
-    results = multi_transformer(bert_train_list, bert_test_list,
-                                config['model'], config['model'])
-
-    return results
-
-def train_transformer():
-
-    # bow = train_test_loop_baseline(enet, enet_param_grid, bow_x_train, y_train_list, bow_x_test, y_test_list, 'bow')
-    # empath = train_test_loop_baseline(enet, enet_param_grid, empath_x_train, y_train_list, empath_x_test, y_val_list, 'empath')
-    # lstm = train_test_lstm(df, y_train_list, y_val_list)
-    transformer = train_train_test_multi_transformer(config, bert_train_list,
-                                                     bert_val_list)
-    result_list = [
-        bow or None, empath or None, lstm or None, transformer or None
-    ]
-    # Filter out the Nones, keeping only the existing variable
-    result_list = [x for x in result_list if x is not None]
-    return result_list
-
-
-def train_ml(model, param_grid, x_train, y_train_list, x_test, y_val_list):
-
-    result = train_test_loop_baseline(model, param_grid, x_train,
-                                   y_train_list, x_test, y_val_list, 'bow')
-    
-    return result
 
 
 def transformer_predict(path,
@@ -205,18 +178,3 @@ def transformer_predict(path,
     del model
 
     return np.array(predictions)
-
-
-def all_transformer_predictions(root_path, x_test, method='transformer'):
-
-    paths = os.listdir(root_path)
-
-    predictions = {}
-
-    #eacon
-    for path in paths:
-        print(path)
-        preds = transformer_predict(f'{root}{method}/{path}', x_test)
-        predictions[path] = preds
-
-    return predictions

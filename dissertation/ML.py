@@ -38,8 +38,8 @@ def get_model(model_name):
         return RandomForestRegressor()
     
 
-def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
-                                      paramater_grid, cv, method, score = 'explained_variance', model_output_dir = None):
+def regression_grid_train_test_report(model, x_train, y_train, x_val, x_test, y_test,
+                                      paramater_grid, cv, method, score = 'explained_variance', model_output_dir = None, n_iter = 60):
 
     global frame
 
@@ -53,7 +53,8 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
     model_name = model
     construct = y_test.name
 
-    path = f'{model_output_dir}/{method}/{construct}.pkl'
+    if model_output_dir:
+        path = f'{model_output_dir}/{method}/{construct}.pkl'
 
     ###### grid search
 
@@ -63,9 +64,9 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
     gs = RandomizedSearchCV(model,
                             param_distributions=paramater_grid,
                             scoring=score,
-                            cv=cv,
+                            cv=5,
                             verbose=3,
-                            n_iter=3,
+                            n_iter=n_iter,
                             random_state=152,
                             n_jobs=-1)
 
@@ -77,8 +78,9 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
     print('Grid Search Complete')
     print('==================================')
 
-    ##### predict on test data
-    y_pred = best_estimator.predict(x_test)
+    ##### predict on test and validation data
+    y_pred_test = best_estimator.predict(x_test)
+    y_pred_val = best_estimator.predict(x_val)
 
     ##### savem best model
     if model_output_dir:
@@ -102,21 +104,14 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
 
     print('\n Results Below')
 
-    # mse=metrics.mean_squared_error(y_test, y_pred)
-    # print('MSE: ', round(mse,4))
-    print(
-        f'length of y_test: {len(y_test)}....length of y_pred: {len(y_pred)}')
-    r = pearsonr(y_test, y_pred)
+    # performance on test set for reporting
+    r = pearsonr(y_test, y_pred_test)[0]
     print('r: ', r)
-
-    print()
     print('==================================')
-
-    #create global variable to access it out of function
 
     #results data frame
 
-    frame = pd.DataFrame([[construct, method, model_name, r[0]]],
+    frame = pd.DataFrame([[construct, method, model_name, r]],
                          columns=['construct', 'method', 'model_name', 'r'])
 
     end = time.time()
@@ -127,10 +122,10 @@ def regression_grid_train_test_report(model, x_train, y_train, x_test, y_test,
 
     print('\n \n \n Analysis Complete')
 
-    return frame, r[0], y_pred, construct
+    return {'frame': frame, 'r': r, 'y_test_pred': y_pred_test, 'y_val_pred': y_pred_val, 'construct': construct}
 
 
-def train_test_loop_baseline(models, x_train, y_train_list,
+def train_test_loop_baseline(models, x_train, y_train_list, x_val,
                              x_test, y_test_list, method, output_dir, cv = 5):
 
     dfs = []
@@ -145,9 +140,12 @@ def train_test_loop_baseline(models, x_train, y_train_list,
         paramater_grid = ml_param_grid[model_name]
         
         for i in tqdm(range(0, len(y_train_list))):
-            frame, r, y_pred, construct = regression_grid_train_test_report(
-                model, x_train, y_train_list[i], x_test, y_test_list[i],
+            run_results = regression_grid_train_test_report(
+                model, x_train, y_train_list[i], x_val, x_test, y_test_list[i],
                 paramater_grid, cv, method)
+            # predictions are on the validation data for ensembling
+            # performance is on the test data
+            frame, r, y_pred, construct = run_results['frame'], run_results['r'], run_results['y_val_pred'] , run_results['construct']
             dfs.append(frame)
             # save predictions
             predictions[construct] = y_pred
@@ -197,11 +195,12 @@ def all_ml_predictions(root_path,
 def run_ml(path, output_dir):
     
         ml_data = prepare_ml_data(path)
-        # bow
-        bow_results = train_test_loop_baseline(ml_models, ml_data['bow_x_train'], ml_data['y_train_list'], ml_data['bow_x_test'], ml_data['y_val_list'],
+        
+
+        bow_results = train_test_loop_baseline(ml_models, ml_data['bow_x_train'], ml_data['y_train_list'], ml_data['bow_x_valid'], ml_data['bow_x_test'], ml_data['y_test_list'],
                                  'bow', output_dir)
         
-        empath_results = train_test_loop_baseline(ml_models, ml_data['empath_x_train'], ml_data['y_train_list'], ml_data['empath_x_test'], ml_data['y_val_list'],
+        empath_results = train_test_loop_baseline(ml_models, ml_data['empath_x_train'], ml_data['y_train_list'],  ml_data['empath_x_valid'], ml_data['empath_x_test'], ml_data['y_test_list'],
                                  'empath', output_dir)
         
         print(f'{bow_results} \n \n{empath_results}')

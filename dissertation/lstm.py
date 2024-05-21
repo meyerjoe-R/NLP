@@ -4,7 +4,8 @@ from keras.models import Sequential
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 from keras.utils import pad_sequences
-
+from collections import Counter
+import re
 
 def prepare_lstm(df):
 
