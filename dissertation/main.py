@@ -1,26 +1,26 @@
 import argparse
 
-from modeling import *
-from prep import *
+from dissertation.ML import *
+from dissertation.preprocessing import *
+from dissertation.config import transformer_config, ml_models, ml_param_grid
 
+"""
+Be sure to download spacy en_core_web_md
+python3 -m spacy download en_core_web_md
+"""
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-task_id', type=int, default=None, help='')
+    parser.add_argument('-path', type = str, default = '/home/ec2-user/git/source/dissertation/data/MLdata.csv')
+    parser.add_argument('-output', type = str, default = '//home/ec2-user/git/source/dissertation/output/')
+    parser.add_argument('-run_baseline', action = 'store_true', help='')
     return parser.parse_args()
 
-
-def main():
-
-    #prepare data
-
-    #if ML:
-    #train ML models
-
-    #save ML model results
-    #save ML models
-    #save ML predictions
-
+def main(path: str, output_dir: str, run_baseline: bool):
+    
+    if run_baseline:
+        run_ml(path, output_dir)        
+    
     #if DL:
     #train DL models
     #save DL results
@@ -34,6 +34,6 @@ def main():
 
     pass
 
-
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    main(args.path, args.output, args.run_baseline)
