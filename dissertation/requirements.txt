@@ -14,3 +14,4 @@ keras
 tensorflow
 matplotlib
 keras
+spacy

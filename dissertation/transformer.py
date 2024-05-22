@@ -62,9 +62,10 @@ def transformer(model,
                 train_dataset,
                 valid_dataset,
                 test_dataset,
-                max_length=4096,
+                max_length=2048,
                 num_layers_to_freeze=0,
                 freeze=False):
+
     def tokenize_function(examples, tokenizer):
         return tokenizer(examples['text'],
                          padding='max_length',
@@ -93,7 +94,11 @@ def transformer(model,
         }
 
     train_dataset = Dataset.from_pandas(train_dataset)
+    valid_dataset = Dataset.from_pandas(valid_dataset)
     test_dataset = Dataset.from_pandas(test_dataset)
+
+    print(train_dataset[0])
+    print(test_dataset[0])
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer)
     model = AutoModelForSequenceClassification.from_pretrained(model,
@@ -110,34 +115,31 @@ def transformer(model,
         print(f'Number of trainable parameters: {num_trainable_params}')
 
     train_dataset = train_dataset.map(
-        lambda examples: tokenize_function(examples, tokenizer),
-        batched=True,
-        remove_columns=['text'],
-    )
+        lambda examples: tokenize_function(examples, tokenizer))
 
     valid_dataset = valid_dataset.map(
-        lambda examples: tokenize_function(examples, tokenizer),
-        batched=True,
-        remove_columns=['text'],
-    )
+        lambda examples: tokenize_function(examples, tokenizer))
 
     test_dataset = test_dataset.map(
-        lambda examples: tokenize_function(examples, tokenizer),
-        batched=True,
-        remove_columns=['text'],
-    )
+        lambda examples: tokenize_function(examples, tokenizer))
+
+    mps = torch.backends.mps.is_available()
 
     # Define Trainer
     training_args = TrainingArguments(output_dir='./results',
-                                      do_eval=False,
+                                      do_eval=True,
                                       save_total_limit=2,
                                       learning_rate=2e-5,
                                       gradient_accumulation_steps=4,
                                       per_device_train_batch_size=4,
                                       per_device_eval_batch_size=8,
                                       num_train_epochs=6,
-                                      fp16=True,
-                                      logging_dir='./logs')
+                                      load_best_model_at_end=True,
+                                      save_strategy='epoch',
+                                      eval_strategy='epoch',
+                                      fp16=not mps,
+                                      logging_dir='./logs',
+                                      use_mps_device=mps)
 
     trainer = Trainer(
         model=model,
@@ -163,7 +165,7 @@ def transformer(model,
     return {'y_pred_test': y_pred_test, 'y_pred_val': y_pred_val}
 
 
-def multi_transformer(path: str, model, tokenizer, output_dir):
+def multi_transformer(path, model, tokenizer, output_dir):
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -187,7 +189,7 @@ def multi_transformer(path: str, model, tokenizer, output_dir):
     for train, valid, test, y_test in zip(train_datasets, valid_datasets,
                                           test_datasets, y_test_list):
         construct = constructs[counter]
-        run = transformer(model, tokenizer, train, valid, test, construct)
+        run = transformer(model, tokenizer, train, valid, test)
         y_pred_val = run['y_pred_val']
         y_pred_test = run['y_pred_val']
 
