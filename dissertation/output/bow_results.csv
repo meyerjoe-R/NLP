@@ -1,0 +1,11 @@
+,construct,method,model_name,r
+0,E_Scale_score,bow,ElasticNet(),0.20563378154154274
+0,A_Scale_score,bow,ElasticNet(),0.24394626017543242
+0,O_Scale_score,bow,ElasticNet(),0.08977320452702828
+0,C_Scale_score,bow,ElasticNet(),0.1454243641689429
+0,N_Scale_score,bow,ElasticNet(),0.22978709044556692
+0,E_Scale_score,bow,RandomForestRegressor(),0.17304965542645426
+0,A_Scale_score,bow,RandomForestRegressor(),0.24759156897425047
+0,O_Scale_score,bow,RandomForestRegressor(),0.1151778454295147
+0,C_Scale_score,bow,RandomForestRegressor(),0.09496589874409687
+0,N_Scale_score,bow,RandomForestRegressor(),0.15623150215963977
