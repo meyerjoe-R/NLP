@@ -19,6 +19,7 @@ from transformers import (
 
 from dissertation.preprocessing import concatenate_responses, prepare_train_test_data
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def rename_cols(df, scales):
     return [
@@ -130,18 +131,19 @@ def transformer(model,
     # Define Trainer
     training_args = TrainingArguments(output_dir='./results',
                                       do_eval=True,
-                                      save_total_limit=2,
+                                      save_total_limit=1,
                                       learning_rate=2e-5,
-                                      gradient_accumulation_steps=4,
-                                      per_device_train_batch_size=4,
+                                      gradient_accumulation_steps=2,
+                                      per_device_train_batch_size=8,
                                       per_device_eval_batch_size=8,
-                                      num_train_epochs=6,
+                                      num_train_epochs=5,
                                       load_best_model_at_end=True,
                                       save_strategy='epoch',
                                       eval_strategy='epoch',
-                                      fp16=not mps,
+                                      fp16=True,
                                       logging_dir='./logs',
-                                      use_mps_device=mps)
+                                      use_mps_device=mps,
+                                      dataloader_num_workers=4)
 
     trainer = Trainer(
         model=model,
@@ -193,7 +195,7 @@ def multi_transformer(path, model, tokenizer, output_dir):
         construct = constructs[counter]
         run = transformer(model, tokenizer, train, valid, test)
         y_pred_val = run['y_pred_val']
-        y_pred_test = run['y_pred_val']
+        y_pred_test = run['y_pred_test']
 
         #evaluate performance on test data
         r = pearsonr(y_test, y_pred_test)[0]

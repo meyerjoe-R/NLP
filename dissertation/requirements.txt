@@ -15,3 +15,4 @@ tensorflow
 matplotlib
 keras
 spacy
+sentencepiece

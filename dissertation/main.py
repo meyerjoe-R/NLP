@@ -14,7 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-path',
                         type=str,
-                        default='NLP/dissertation/data/MLdata.csv')
+                        default='dissertation/data/MLdata.csv')
     parser.add_argument('-output',
                         type=str,
                         default='NLP/dissertation/output/')
