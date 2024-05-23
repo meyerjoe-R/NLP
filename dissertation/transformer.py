@@ -101,7 +101,7 @@ def transformer(model,
 
     print(train_dataset[0])
     print(test_dataset[0])
-
+    
     tokenizer = AutoTokenizer.from_pretrained(tokenizer)
     model = AutoModelForSequenceClassification.from_pretrained(model,
                                                                num_labels=1)
@@ -134,9 +134,10 @@ def transformer(model,
                                       save_total_limit=1,
                                       learning_rate=2e-5,
                                       gradient_accumulation_steps=2,
-                                      per_device_train_batch_size=8,
+                                      per_device_train_batch_size=4,
                                       per_device_eval_batch_size=8,
                                       num_train_epochs=5,
+                                      max_steps = 2,
                                       load_best_model_at_end=True,
                                       save_strategy='epoch',
                                       eval_strategy='epoch',
@@ -188,10 +189,18 @@ def multi_transformer(path, model, tokenizer, output_dir):
             'bert_test_list']
 
     # ys
-    y_test_list = data_dict['y_test_list'],
+    y_test_list = data_dict['y_test_list']
+    
+    print('lenghts of data frames')
+    print([len(y) for y in y_test_list])
+    print([len(x) for x in train_datasets])
+    print([len(x) for x in valid_datasets])
+    print([len(x) for x in test_datasets])
 
     for train, valid, test, y_test in zip(train_datasets, valid_datasets,
                                           test_datasets, y_test_list):
+        
+        
         construct = constructs[counter]
         run = transformer(model, tokenizer, train, valid, test)
         y_pred_val = run['y_pred_val']
@@ -207,13 +216,15 @@ def multi_transformer(path, model, tokenizer, output_dir):
         torch.cuda.empty_cache()
         counter += 1
 
+    # normalize model name
+    model = model.replace('/', '-')
     # save predictions across constructs
     predictions = pd.DataFrame(preds)
-    predictions.to_csv(f'{output_dir}/{model}_transformer_preds.csv')
+    predictions.to_csv(f'{output_dir}{model}_transformer_predictions.csv')
     print(f'predictions saved in {output_dir}')
 
-    metrics = pd.DataFrame(results)
-    metrics.to_csv(f'{output_dir}/{model}_transformer_results.csv')
+    metrics = pd.DataFrame(results, index = [0])
+    metrics.to_csv(f'{output_dir}{model}_transformer_results.csv')
     print(f'results saved in {output_dir}')
 
     return results
