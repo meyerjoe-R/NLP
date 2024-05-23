@@ -22,24 +22,33 @@ from dissertation.preprocessing import prepare_ml_data
 
 from dissertation.config import *
 
-
 nlp = en_core_web_md.load()
 
 warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
 
 def get_model(model_name):
-    
+
     assert model_name in ml_models, 'model_name should be in config'
-    
+
     if 'elasticnet' in model_name.lower():
         return ElasticNet()
     if 'randomforest' in model_name.lower():
         return RandomForestRegressor()
-    
 
-def regression_grid_train_test_report(model, x_train, y_train, x_val, x_test, y_test,
-                                      paramater_grid, cv, method, score = 'explained_variance', model_output_dir = None, n_iter = 60):
+
+def regression_grid_train_test_report(model,
+                                      x_train,
+                                      y_train,
+                                      x_val,
+                                      x_test,
+                                      y_test,
+                                      paramater_grid,
+                                      cv,
+                                      method,
+                                      score='explained_variance',
+                                      model_output_dir=None,
+                                      n_iter=60):
 
     global frame
 
@@ -60,7 +69,7 @@ def regression_grid_train_test_report(model, x_train, y_train, x_val, x_test, y_
 
     # construct grid search
     # number of parameter settings set to 60
-    
+
     gs = RandomizedSearchCV(model,
                             param_distributions=paramater_grid,
                             scoring=score,
@@ -122,35 +131,49 @@ def regression_grid_train_test_report(model, x_train, y_train, x_val, x_test, y_
 
     print('\n \n \n Analysis Complete')
 
-    return {'frame': frame, 'r': r, 'y_test_pred': y_pred_test, 'y_val_pred': y_pred_val, 'construct': construct}
+    return {
+        'frame': frame,
+        'r': r,
+        'y_test_pred': y_pred_test,
+        'y_val_pred': y_pred_val,
+        'construct': construct
+    }
 
 
-def train_test_loop_baseline(models, x_train, y_train_list, x_val,
-                             x_test, y_test_list, method, output_dir, cv = 5):
+def train_test_loop_baseline(models,
+                             x_train,
+                             y_train_list,
+                             x_val,
+                             x_test,
+                             y_test_list,
+                             method,
+                             output_dir,
+                             cv=5):
 
     dfs = []
     predictions = {}
     construct_list = []
-    
+
     save_dir = f'{output_dir}/{method}'
 
     for model_name in models:
         print(f'running {model_name}')
         model = get_model(model_name)
         paramater_grid = ml_param_grid[model_name]
-        
+
         for i in tqdm(range(0, len(y_train_list))):
             run_results = regression_grid_train_test_report(
                 model, x_train, y_train_list[i], x_val, x_test, y_test_list[i],
                 paramater_grid, cv, method)
             # predictions are on the validation data for ensembling
             # performance is on the test data
-            frame, r, y_pred, construct = run_results['frame'], run_results['r'], run_results['y_val_pred'] , run_results['construct']
+            frame, r, y_pred, construct = run_results['frame'], run_results[
+                'r'], run_results['y_val_pred'], run_results['construct']
             dfs.append(frame)
             # save predictions
             predictions[construct] = y_pred
             construct_list.append(construct)
-        
+
         pred_df = pd.DataFrame(predictions)
         pred_df.to_csv(f'{save_dir}_predictions.csv')
 
@@ -162,6 +185,7 @@ def train_test_loop_baseline(models, x_train, y_train_list, x_val,
     print('baselines finished')
     return output
 
+
 def ml_predict(path, x_test):
 
     # Load the saved model for predictions
@@ -172,13 +196,12 @@ def ml_predict(path, x_test):
 
     return y_pred
 
+
 def get_all_model_paths(path):
     return os.lisdir(path)
 
-def all_ml_predictions(root_path,
-                       x_test,
-                       method,
-                       root=''):
+
+def all_ml_predictions(root_path, x_test, method, root=''):
 
     paths = os.listdir(root_path)
 
@@ -192,15 +215,21 @@ def all_ml_predictions(root_path,
 
     return predictions
 
-def run_ml(path, output_dir):
-    
-        ml_data = prepare_ml_data(path)
-        
 
-        bow_results = train_test_loop_baseline(ml_models, ml_data['bow_x_train'], ml_data['y_train_list'], ml_data['bow_x_valid'], ml_data['bow_x_test'], ml_data['y_test_list'],
-                                 'bow', output_dir)
-        
-        empath_results = train_test_loop_baseline(ml_models, ml_data['empath_x_train'], ml_data['y_train_list'],  ml_data['empath_x_valid'], ml_data['empath_x_test'], ml_data['y_test_list'],
-                                 'empath', output_dir)
-        
-        print(f'{bow_results} \n \n{empath_results}')
+def run_ml(path, output_dir):
+
+    ml_data = prepare_ml_data(path)
+
+    bow_results = train_test_loop_baseline(ml_models, ml_data['bow_x_train'],
+                                           ml_data['y_train_list'],
+                                           ml_data['bow_x_valid'],
+                                           ml_data['bow_x_test'],
+                                           ml_data['y_test_list'], 'bow',
+                                           output_dir)
+
+    empath_results = train_test_loop_baseline(
+        ml_models, ml_data['empath_x_train'], ml_data['y_train_list'],
+        ml_data['empath_x_valid'], ml_data['empath_x_test'],
+        ml_data['y_test_list'], 'empath', output_dir)
+
+    print(f'{bow_results} \n \n{empath_results}')

@@ -7,25 +7,26 @@ import ast
 
 
 def r_confidence_interval(r, n):
-  """
+    """
   r: corr
   n: size
   """
-  #fisher's r to z
-  r_z = np.arctanh(r)
+    #fisher's r to z
+    r_z = np.arctanh(r)
 
-  #se
-  se = 1/np.sqrt(n-3)
+    #se
+    se = 1 / np.sqrt(n - 3)
 
-  alpha = 0.05
-  z = stats.norm.ppf(1-alpha/2)
+    alpha = 0.05
+    z = stats.norm.ppf(1 - alpha / 2)
 
-  lo_z, hi_z = r_z-z*se, r_z+z*se
+    lo_z, hi_z = r_z - z * se, r_z + z * se
 
-  #transform back
-  lo, hi = np.tanh((lo_z, hi_z))
+    #transform back
+    lo, hi = np.tanh((lo_z, hi_z))
 
-  return f"[{round(lo,2)}, {round(hi,2)}]"
+    return f"[{round(lo,2)}, {round(hi,2)}]"
+
 
 def extract_pearson_r(text):
     pattern = r'statistic=([-+]?\d*\.\d+|\d+)'
@@ -38,14 +39,22 @@ def extract_pearson_r(text):
 
 def average_construct_performance(df):
 
-    average_construct_performance = pd.concat(dfs.values()).groupby('construct')[['r', 'Lower Limit', 'Upper Limit']].mean().reset_index()
+    average_construct_performance = pd.concat(
+        dfs.values()).groupby('construct')[['r', 'Lower Limit', 'Upper Limit'
+                                            ]].mean().reset_index()
 
     return average_construct_performance
 
 
-def create_apa_formatted_bar_chart_construct_average(averages, conf_intervals, labels, title, 
-                                                     x_axis_label, y_axis_label, 
-                                                     figure_number, caption=None, notes=None):
+def create_apa_formatted_bar_chart_construct_average(averages,
+                                                     conf_intervals,
+                                                     labels,
+                                                     title,
+                                                     x_axis_label,
+                                                     y_axis_label,
+                                                     figure_number,
+                                                     caption=None,
+                                                     notes=None):
     """
     example:
     constructs = ['A_Scale_score', 'C_Scale_score', 'E_Scale_score', 'N_Scale_score', 'O_Scale_score']
@@ -68,7 +77,13 @@ def create_apa_formatted_bar_chart_construct_average(averages, conf_intervals, l
     # Create a bar chart with error bars
     fig, ax = plt.subplots()
     x = np.arange(len(labels))
-    ax.bar(x, averages, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+    ax.bar(x,
+           averages,
+           yerr=errors,
+           align='center',
+           alpha=0.5,
+           ecolor='black',
+           capsize=10)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_ylabel(y_axis_label)
@@ -92,15 +107,13 @@ def create_apa_formatted_bar_chart_construct_average(averages, conf_intervals, l
 
 
 def average_confidence_intervals(confidence_intervals):
-    
     """
     example:
     intervals = [[0.1, 0.32], [0.07, 0.29], [-0.12, 0.1], [-0.02, 0.2], [0.01, 0.23]]
     average_confidence_intervals(intervals)
     
     """
-    
-    
+
     num_intervals = len(confidence_intervals)
     lower_sum = 0
     upper_sum = 0
@@ -115,8 +128,15 @@ def average_confidence_intervals(confidence_intervals):
     return [average_lower, average_upper]
 
 
-def create_apa_formatted_bar_chart_model_average(averages, conf_intervals, labels, title, x_axis_label, y_axis_label, figure_number, caption = None, notes=None):
-    
+def create_apa_formatted_bar_chart_model_average(averages,
+                                                 conf_intervals,
+                                                 labels,
+                                                 title,
+                                                 x_axis_label,
+                                                 y_axis_label,
+                                                 figure_number,
+                                                 caption=None,
+                                                 notes=None):
     """
     example:
     averages = [.18, 0.14, .03, 0.23]
@@ -132,7 +152,7 @@ def create_apa_formatted_bar_chart_model_average(averages, conf_intervals, label
     create_apa_formatted_bar_chart(averages, conf_intervals, labels, title, x_axis_label, y_axis_label, figure_number)
 
     """
-     
+
     # Extract lower and upper bounds of confidence intervals
     lower_bounds, upper_bounds = zip(*conf_intervals)
 
@@ -142,7 +162,13 @@ def create_apa_formatted_bar_chart_model_average(averages, conf_intervals, label
     # Create a bar chart with error bars
     fig, ax = plt.subplots()
     x = np.arange(len(labels))
-    ax.bar(x, averages, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+    ax.bar(x,
+           averages,
+           yerr=errors,
+           align='center',
+           alpha=0.5,
+           ecolor='black',
+           capsize=10)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_ylabel(y_axis_label)
@@ -158,8 +184,8 @@ def create_apa_formatted_bar_chart_model_average(averages, conf_intervals, label
 
     # Add APA-style figure number and caption
     if caption:
-      apa_caption = f"Figure {figure_number}. {caption}"
-      plt.figtext(0.5, -0.15, apa_caption, fontsize=12, ha='center')
+        apa_caption = f"Figure {figure_number}. {caption}"
+        plt.figtext(0.5, -0.15, apa_caption, fontsize=12, ha='center')
 
     # Show the plot or save it to a file
     plt.show()

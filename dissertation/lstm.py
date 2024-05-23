@@ -7,67 +7,69 @@ from keras.utils import pad_sequences
 from collections import Counter
 import re
 
+
 def prepare_lstm(df):
 
-  print('Preparing lstm...')
+    print('Preparing lstm...')
 
-  def clean_text2(text):
-    """
+    def clean_text2(text):
+        """
     1. Lowercases text
     2. Removes punctuation
     3. Removes numbers
 
     """
-    text = text.lower()
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = "".join([i for i in text if not i.isdigit()])
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', ' ', text)
+        text = "".join([i for i in text if not i.isdigit()])
 
-    return text
+        return text
 
-  embedding_dim = 300
+    embedding_dim = 300
 
-  results = Counter()
+    results = Counter()
 
-  df['lstm_text'] = df['Response'].apply(clean_text2)
-  lstm_train = df.loc[df.Dataset == 'Train']
-  lstm_test = df.loc[df.Dataset == 'Dev']
-  lstm_x_train = lstm_train['lstm_text']
-  lstm_x_test = lstm_test['lstm_text']
+    df['lstm_text'] = df['Response'].apply(clean_text2)
+    lstm_train = df.loc[df.Dataset == 'Train']
+    lstm_test = df.loc[df.Dataset == 'Dev']
+    lstm_x_train = lstm_train['lstm_text']
+    lstm_x_test = lstm_test['lstm_text']
 
-  df['lstm_text'].str.lower().str.split().apply(results.update)
-  print(f'length of results: {len(results)}')
+    df['lstm_text'].str.lower().str.split().apply(results.update)
+    print(f'length of results: {len(results)}')
 
-  #set vocabulary size and embedding size
-  voc_size = len(results)
+    #set vocabulary size and embedding size
+    voc_size = len(results)
 
-  #check for longest length for padding purposes
-  list = [x for x in df['lstm_text']]
-  longest = max(list, key = len)
-  max_length = len(longest)
-  print(f' max length is: {max_length}')
+    #check for longest length for padding purposes
+    list = [x for x in df['lstm_text']]
+    longest = max(list, key=len)
+    max_length = len(longest)
+    print(f' max length is: {max_length}')
 
-  #unique responses
-  unique = set([x for x in df['lstm_text']])
-  print(f'length of unique: {len(unique)}')
+    #unique responses
+    unique = set([x for x in df['lstm_text']])
+    print(f'length of unique: {len(unique)}')
 
-  #tokenize
-  tokenizer = Tokenizer(num_words=voc_size)
-  tokenizer.fit_on_texts(lstm_x_train)
+    #tokenize
+    tokenizer = Tokenizer(num_words=voc_size)
+    tokenizer.fit_on_texts(lstm_x_train)
 
-  #pad
-  sequences = tokenizer.texts_to_sequences(lstm_x_train.values)
-  lstm_x_train = pad_sequences(sequences,maxlen=max_length)
+    #pad
+    sequences = tokenizer.texts_to_sequences(lstm_x_train.values)
+    lstm_x_train = pad_sequences(sequences, maxlen=max_length)
 
-  print(f'x_train shape is : {lstm_x_train.shape}')
+    print(f'x_train shape is : {lstm_x_train.shape}')
 
-  #tokenize
-  tokenizer.fit_on_texts(lstm_x_test)
+    #tokenize
+    tokenizer.fit_on_texts(lstm_x_test)
 
-  #pad
-  test_sequences = tokenizer.texts_to_sequences(lstm_x_test.values)
-  lstm_x_test = pad_sequences(test_sequences,maxlen=max_length)
+    #pad
+    test_sequences = tokenizer.texts_to_sequences(lstm_x_test.values)
+    lstm_x_test = pad_sequences(test_sequences, maxlen=max_length)
 
-  return lstm_x_test
+    return lstm_x_test
+
 
 def train_test_lstm(df, y_train_list, y_test_list, embedding_dim=300):
 
@@ -187,7 +189,6 @@ def train_test_lstm(df, y_train_list, y_test_list, embedding_dim=300):
         print('model saved..')
 
     return results, lstm_x_test
-
 
 
 def all_lstm_predictions(root_path, x_test, method='lstm'):

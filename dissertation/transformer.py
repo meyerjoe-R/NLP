@@ -4,6 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
+
 from datasets import Dataset
 from scipy.stats import pearsonr
 from tqdm import tqdm
@@ -65,7 +67,6 @@ def transformer(model,
                 max_length=2048,
                 num_layers_to_freeze=0,
                 freeze=False):
-
     def tokenize_function(examples, tokenizer):
         return tokenizer(examples['text'],
                          padding='max_length',
@@ -103,6 +104,7 @@ def transformer(model,
     tokenizer = AutoTokenizer.from_pretrained(tokenizer)
     model = AutoModelForSequenceClassification.from_pretrained(model,
                                                                num_labels=1)
+    print(model.config)
 
     if freeze or num_layers_to_freeze > 0:
         # Freeze the specified number of layers

@@ -1,5 +1,3 @@
-
-
 transformer_config = {
     'model': 'google/bigbird-roberta-base',
     'tokenizer': 'google/bigbird-roberta-base'
@@ -18,7 +16,7 @@ ml_param_grid = {
         'max_depth': [10, 20, 30, 40, 50, 60],
         'min_samples_split': [2, 5, 10, 15],
         'min_samples_leaf': [1, 2, 4, 6],
-        'max_features': [ 'sqrt', 'log2'],
+        'max_features': ['sqrt', 'log2'],
         'bootstrap': [True, False]
     }
 }
