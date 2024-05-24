@@ -4,8 +4,8 @@
 0,O_Scale_score,empath,ElasticNet(),0.15951194496971477
 0,C_Scale_score,empath,ElasticNet(),0.08361671919442018
 0,N_Scale_score,empath,ElasticNet(),0.13105882691296622
-0,E_Scale_score,empath,RandomForestRegressor(),0.11618971575479196
-0,A_Scale_score,empath,RandomForestRegressor(),0.1507107138679066
-0,O_Scale_score,empath,RandomForestRegressor(),0.10294425221682678
-0,C_Scale_score,empath,RandomForestRegressor(),-0.0204591608775785
-0,N_Scale_score,empath,RandomForestRegressor(),0.039934232306368146
+0,E_Scale_score,empath,RandomForestRegressor(),0.10297961947059021
+0,A_Scale_score,empath,RandomForestRegressor(),0.1486724779956848
+0,O_Scale_score,empath,RandomForestRegressor(),0.1003447557074472
+0,C_Scale_score,empath,RandomForestRegressor(),0.0064721233820589875
+0,N_Scale_score,empath,RandomForestRegressor(),0.02685070244793193

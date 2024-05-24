@@ -200,13 +200,6 @@ def ml_predict(path, x_test):
 
     return y_pred
 
-<<<<<<< Updated upstream
-
-def get_all_model_paths(path):
-    return os.lisdir(path)
-=======
->>>>>>> Stashed changes
-
 
 def all_ml_predictions(root_path, x_test, method, root=''):
 
