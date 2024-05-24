@@ -16,3 +16,4 @@ matplotlib
 keras
 spacy
 sentencepiece
+xgboost

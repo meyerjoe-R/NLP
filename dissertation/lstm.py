@@ -88,7 +88,8 @@ def train_test_lstm(path, output_dir, embedding_dim=300):
     
     cor = []
     results = {}
-    preds = {}
+    valid_preds = {}
+    test_preds = {}
     
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
@@ -118,7 +119,8 @@ def train_test_lstm(path, output_dir, embedding_dim=300):
         r = stats.pearsonr(y_test_list[i], y_flat_test)
         print('r: ', round(r[0], 4))
         cor.append(r[0])
-        preds[construct] = y_pred_val.flatten()
+        valid_preds[construct] = y_pred_val.flatten()
+        test_preds[construct] = y_flat_test
         
         results[construct] = r
 
@@ -126,7 +128,10 @@ def train_test_lstm(path, output_dir, embedding_dim=300):
     results.to_csv(f'{output_dir}lstm_results.csv')
     
     # save predictions
-    preds = pd.DataFrame(preds)
-    preds.to_csv(f'{output_dir}lstm_predictions.csv')
+    valid_preds = pd.DataFrame(valid_preds)
+    valid_preds.to_csv(f'{output_dir}lstm_valid_predictions.csv')
+    
+    test_preds = pd.DataFrame(test_preds)
+    test_preds.to_csv(f'{output_dir}lstm_test_predictions.csv')
 
     return results
