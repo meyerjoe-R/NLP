@@ -137,7 +137,7 @@ def transformer(model,
                                       per_device_train_batch_size=4,
                                       per_device_eval_batch_size=8,
                                       num_train_epochs=5,
-                                      max_steps = 2,
+                                      max_steps = -1,
                                       load_best_model_at_end=True,
                                       save_strategy='epoch',
                                       eval_strategy='epoch',
@@ -176,7 +176,8 @@ def multi_transformer(path, model, tokenizer, output_dir):
     gc.collect()
 
     results = {}
-    preds = {}
+    valid_preds = {}
+    test_preds = {}
     constructs = ['y_E_val', 'y_A_val', 'y_O_val', 'y_C_val', 'y_N_val']
     counter = 0
 
@@ -212,15 +213,20 @@ def multi_transformer(path, model, tokenizer, output_dir):
         results[construct] = r
 
         # store predictions on validation data
-        preds[construct] = y_pred_val
+        valid_preds[construct] = y_pred_val
+        test_preds[construct] = y_pred_test
         torch.cuda.empty_cache()
         counter += 1
 
     # normalize model name
     model = model.replace('/', '-')
     # save predictions across constructs
-    predictions = pd.DataFrame(preds)
-    predictions.to_csv(f'{output_dir}{model}_transformer_predictions.csv')
+    val_predictions = pd.DataFrame(valid_preds)
+    val_predictions.to_csv(f'{output_dir}{model}_transformer_valid_predictions.csv')
+
+    test_predictions = pd.DataFrame(test_preds)
+    test_predictions.to_csv(f'{output_dir}{model}_transformer_test_predictions.csv')
+    
     print(f'predictions saved in {output_dir}')
 
     metrics = pd.DataFrame(results, index = [0])
