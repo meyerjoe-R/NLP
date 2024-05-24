@@ -151,7 +151,8 @@ def train_test_loop_baseline(models,
                              cv=5):
 
     dfs = []
-    predictions = {}
+    val_predictions = {}
+    test_predictions ={}
     construct_list = []
 
     save_dir = f'{output_dir}/{method}'
@@ -167,15 +168,18 @@ def train_test_loop_baseline(models,
                 paramater_grid, cv, method)
             # predictions are on the validation data for ensembling
             # performance is on the test data
-            frame, r, y_pred, construct = run_results['frame'], run_results[
-                'r'], run_results['y_val_pred'], run_results['construct']
+            frame, r, y_pred_val, construct, y_pred_test = run_results['frame'], run_results['r'], run_results['y_val_pred'] , run_results['construct'], run_results['y_test_pred']
             dfs.append(frame)
             # save predictions
-            predictions[construct] = y_pred
+            val_predictions[construct] = y_pred_val
+            test_predictions[construct] = y_pred_test
             construct_list.append(construct)
-
-        pred_df = pd.DataFrame(predictions)
-        pred_df.to_csv(f'{save_dir}_predictions.csv')
+        
+        val_pred_df = pd.DataFrame(val_predictions)
+        val_pred_df.to_csv(f'{save_dir}_valid_predictions.csv')
+        
+        test_pred_df = pd.DataFrame(test_predictions)
+        test_pred_df.to_csv(f'{save_dir}_test_predictions.csv')
 
     output = pd.concat(dfs)
 
@@ -196,9 +200,12 @@ def ml_predict(path, x_test):
 
     return y_pred
 
+<<<<<<< Updated upstream
 
 def get_all_model_paths(path):
     return os.lisdir(path)
+=======
+>>>>>>> Stashed changes
 
 
 def all_ml_predictions(root_path, x_test, method, root=''):
