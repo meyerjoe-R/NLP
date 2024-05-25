@@ -56,7 +56,7 @@ def clean_text(text):
     return text
 
 
-def prepare_train_test_data(df):
+def prepare_train_test_data(df, return_dict = False):
     scales = [
         'E_Scale_score', 'A_Scale_score', 'O_Scale_score', 'C_Scale_score',
         'N_Scale_score'

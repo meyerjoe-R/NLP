@@ -29,6 +29,11 @@ def rename_cols(df, scales):
         }) for scale in scales
     ]
 
+def print_average_words(train):
+    train_responses = train['Response']
+    total_words = train_responses.apply(lambda x: len(x.split()))
+    average_words = total_words.mean()
+    print(f"Average number of words in train['Response']: {average_words}")
 
 def prepare_transformer_data(path):
 
@@ -38,6 +43,8 @@ def prepare_transformer_data(path):
 
     train, valid, test, y_train_list, y_val_list, y_test_list = prepare_train_test_data(
         df)
+    
+    print_average_words(train)
 
     scales = [
         'E_Scale_score', 'A_Scale_score', 'O_Scale_score', 'C_Scale_score',
@@ -65,7 +72,7 @@ def transformer(model,
                 train_dataset,
                 valid_dataset,
                 test_dataset,
-                max_length=2048,
+                max_length=350,
                 num_layers_to_freeze=0,
                 freeze=False):
     def tokenize_function(examples, tokenizer):
@@ -136,7 +143,7 @@ def transformer(model,
                                       gradient_accumulation_steps=2,
                                       per_device_train_batch_size=4,
                                       per_device_eval_batch_size=8,
-                                      num_train_epochs=5,
+                                      num_train_epochs=8,
                                       max_steps = -1,
                                       load_best_model_at_end=True,
                                       save_strategy='epoch',

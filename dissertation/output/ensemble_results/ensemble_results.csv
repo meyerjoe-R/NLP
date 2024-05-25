@@ -1,0 +1,11 @@
+,construct,method,model_name,r
+0,target,ensemble,ElasticNet(),0.17829028157022245
+0,target,ensemble,ElasticNet(),0.2598842194069421
+0,target,ensemble,ElasticNet(),0.1666889680550765
+0,target,ensemble,ElasticNet(),0.3474742694774982
+0,target,ensemble,ElasticNet(),0.31751970864223
+0,target,ensemble,RandomForestRegressor(),0.17695532696426913
+0,target,ensemble,RandomForestRegressor(),0.21401361414383718
+0,target,ensemble,RandomForestRegressor(),0.12867758211044786
+0,target,ensemble,RandomForestRegressor(),0.26455331608912536
+0,target,ensemble,RandomForestRegressor(),0.2683405021554357

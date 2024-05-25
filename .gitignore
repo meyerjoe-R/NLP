@@ -1,0 +1,22 @@
+# Ignore the venv directory and all its contents
+venv/
+
+# Ignore all .log files
+*.log
+
+# Ignore the log directory and all its contents
+logs/
+
+log/
+
+# Ignore log.txt file
+log.txt
+
+# Ignore catboost_info directory and all its contents
+catboost_info/
+
+# Ignore __pycache__ directory in dissertation and all its contents
+dissertation/__pycache__/
+
+# models are in here
+results/

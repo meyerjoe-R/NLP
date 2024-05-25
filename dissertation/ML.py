@@ -17,6 +17,9 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import ElasticNet
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.exceptions import ConvergenceWarning
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
+import xgboost as xgb
 
 from dissertation.preprocessing import prepare_ml_data
 
@@ -29,30 +32,34 @@ warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
 def get_model(model_name):
 
-    assert model_name in ml_models, 'model_name should be in config'
-
     if 'elasticnet' in model_name.lower():
         return ElasticNet()
     if 'randomforest' in model_name.lower():
         return RandomForestRegressor()
+    if 'xgb' in model_name.lower():
+        return xgb.XGBRegressor(objective='reg:squarederror')
+    if 'lgb' in model_name.lower():
+        return LGBMRegressor()
+    if 'catboost' in model_name.lower():
+        return CatBoostRegressor()
 
 
 def regression_grid_train_test_report(model,
                                       x_train,
                                       y_train,
-                                      x_val,
                                       x_test,
                                       y_test,
                                       paramater_grid,
                                       cv,
                                       method,
+                                      x_val=None,
                                       score='explained_variance',
                                       model_output_dir=None,
                                       n_iter=60):
 
     global frame
 
-    #start timer
+    # Start timer
     start = time.time()
 
     print(
@@ -65,12 +72,12 @@ def regression_grid_train_test_report(model,
     if model_output_dir:
         path = f'{model_output_dir}/{method}/{construct}.pkl'
 
-    ###### grid search
+    ###### Grid search
 
-    # construct grid search
-    # number of parameter settings set to 60
+    # Construct grid search
+    # Number of parameter settings set to 60
 
-    gs = RandomizedSearchCV(model,
+    gs = RandomizedSearchCV(estimator=model,
                             param_distributions=paramater_grid,
                             scoring=score,
                             cv=5,
@@ -79,7 +86,7 @@ def regression_grid_train_test_report(model,
                             random_state=152,
                             n_jobs=-1)
 
-    #fit on training data
+    # Fit on training data
     gs.fit(x_train, y_train)
     best_parameters = gs.best_params_
     best_estimator = gs.best_estimator_
@@ -87,23 +94,24 @@ def regression_grid_train_test_report(model,
     print('Grid Search Complete')
     print('==================================')
 
-    ##### predict on test and validation data
+    ##### Predict on test and validation data
     y_pred_test = best_estimator.predict(x_test)
-    y_pred_val = best_estimator.predict(x_val)
+    y_pred_val = None
 
-    ##### savem best model
+    if x_val is not None:
+        y_pred_val = best_estimator.predict(x_val)
+        
+    ##### Save best model
     if model_output_dir:
         joblib.dump(best_estimator, path)
         print('Best model saved')
 
-    ###### regression report
+    ###### Regression report
 
     print(f'Outcome Variable: {construct}')
 
-    #number of grid search combinations
-
+    # Number of grid search combinations
     n_iterations = 1
-
     for value in paramater_grid.values():
         n_iterations *= len(value)
 
@@ -113,13 +121,12 @@ def regression_grid_train_test_report(model,
 
     print('\n Results Below')
 
-    # performance on test set for reporting
+    # Performance on test set for reporting
     r = pearsonr(y_test, y_pred_test)[0]
     print('r: ', r)
     print('==================================')
 
-    #results data frame
-
+    # Results data frame
     frame = pd.DataFrame([[construct, method, model_name, r]],
                          columns=['construct', 'method', 'model_name', 'r'])
 
@@ -138,7 +145,6 @@ def regression_grid_train_test_report(model,
         'y_val_pred': y_pred_val,
         'construct': construct
     }
-
 
 def train_test_loop_baseline(models,
                              x_train,
