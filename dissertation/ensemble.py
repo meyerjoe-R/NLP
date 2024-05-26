@@ -19,7 +19,7 @@ from sklearn.metrics import mean_squared_error
 
 from tqdm import tqdm
 
-from dissertation.ML import train_test_loop_baseline, get_model, regression_grid_train_test_report
+from dissertation.ML import get_model, regression_grid_train_test_report, correlation_scorer
 
 from dissertation.preprocessing import prepare_train_test_data
 
@@ -255,10 +255,6 @@ def train_test_nn():
 
 ########## xgboost ##########
 
-def correlation_scorer(y_true, y_pred):
-    correlation, _ = pearsonr(y_pred, y_true)
-    return correlation
-
 def tune_xgb(X_train, y_train, X_test, y_test):
     xgb_model = xgb.XGBRegressor(objective='reg:squarederror')
 
@@ -336,10 +332,10 @@ def ml_ensemble(models,
                 cv=5):
 
     dfs = []
-    val_predictions = {}
     test_predictions = {}
     construct_list = []
 
+    print('beginning ensemble modeling............')
 
     for model_name in models:
         save_dir = f'{output_dir}/{method}'
@@ -354,7 +350,7 @@ def ml_ensemble(models,
             X_train, y_train = get_x_y(train_df)
             x_test, y_test = get_x_y(test_df)
 
-            run_results = regression_grid_train_test_report(
+            run_results = regression_grid_train_test_report(model_name,
                 model, X_train, y_train, x_test, y_test,
                 parameter_grid, cv, method)
 
@@ -368,7 +364,6 @@ def ml_ensemble(models,
             
             # override construct
             construct = key
-            frame['model_name'] = model_name
             dfs.append(frame)
             test_predictions[construct] = y_pred_test
             construct_list.append(construct)
@@ -380,9 +375,12 @@ def ml_ensemble(models,
     output['construct'] = construct_list
     print(f'Results...\n {output}')
     output.to_csv(f'{save_dir}_results.csv')
-    print('baselines finished')
     return output
 
+# tune_xgb_loop(ensemble_directory, output_dir)
+# NN
+# tune_nn_loop(ensemble_directory, nn_search_space)
+# best_config = {'activation_function': nn.ReLU, 'batch_size': 32, 'dropout_rate': .1, 'lr': 1e-5}
 
 
 ####### Ensemble Loop #######
@@ -393,11 +391,7 @@ def ensemble_(directory = 'dissertation/output', ensemble_directory = 'dissertat
     for data_type in ['valid', 'test']:
         prepare_ensemble(directory, data_type)
     
-    # tune_xgb_loop(ensemble_directory, output_dir)
-    
-    # NN
-    # tune_nn_loop(ensemble_directory, nn_search_space)
-    best_config = {'activation_function': nn.ReLU, 'batch_size': 32, 'dropout_rate': .1, 'lr': 1e-5}
+
     
     valid_dfs, test_dfs = gather_ensemble_data(ensemble_directory)
     ml_ensemble(ml_models, valid_dfs, test_dfs, 'ensemble', ensemble_output_directory)

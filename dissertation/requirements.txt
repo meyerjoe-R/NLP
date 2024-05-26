@@ -17,3 +17,6 @@ keras
 spacy
 sentencepiece
 xgboost
+lightgbm
+catboost
+ray

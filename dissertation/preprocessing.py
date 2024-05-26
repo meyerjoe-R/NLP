@@ -8,8 +8,8 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import CountVectorizer
 from empath import Empath
 
-nltk.download('stopwords')
-nltk.download('punkt')
+# nltk.download('stopwords')
+# nltk.download('punkt')
 
 
 def concatenate_responses(df):
@@ -154,9 +154,10 @@ def prepare_ml_data(path):
 
     empath_x_train, empath_x_valid, empath_x_test = prepare_empath(
         train, valid, test)
+    
     bow_x_train, bow_x_valid, bow_x_test = prepare_bow(train, valid, test)
-
-    return {
+    
+    results_dict = {
         'df': df,
         'train': train,
         'valid': valid,
@@ -171,3 +172,7 @@ def prepare_ml_data(path):
         'bow_x_valid': bow_x_valid,
         'bow_x_test': bow_x_test
     }
+    
+    print(results_dict)
+
+    return results_dict

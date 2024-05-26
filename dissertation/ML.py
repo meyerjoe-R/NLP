@@ -20,6 +20,8 @@ from sklearn.exceptions import ConvergenceWarning
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 import xgboost as xgb
+from sklearn.metrics import make_scorer
+
 
 from dissertation.preprocessing import prepare_ml_data
 
@@ -29,6 +31,9 @@ nlp = en_core_web_md.load()
 
 warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
+def correlation_scorer(y_true, y_pred):
+    correlation, _ = pearsonr(y_pred, y_true)
+    return correlation
 
 def get_model(model_name):
 
@@ -44,7 +49,8 @@ def get_model(model_name):
         return CatBoostRegressor()
 
 
-def regression_grid_train_test_report(model,
+def regression_grid_train_test_report(model_name,
+                                      model,
                                       x_train,
                                       y_train,
                                       x_test,
@@ -53,7 +59,6 @@ def regression_grid_train_test_report(model,
                                       cv,
                                       method,
                                       x_val=None,
-                                      score='explained_variance',
                                       model_output_dir=None,
                                       n_iter=60):
 
@@ -66,8 +71,11 @@ def regression_grid_train_test_report(model,
         '\n Performing grid search....hold tight... \n ============================='
     )
 
-    model_name = model
     construct = y_test.name
+    
+    print(f'y train: {y_train}')
+    
+    print(f' construct {construct}')
 
     if model_output_dir:
         path = f'{model_output_dir}/{method}/{construct}.pkl'
@@ -79,7 +87,7 @@ def regression_grid_train_test_report(model,
 
     gs = RandomizedSearchCV(estimator=model,
                             param_distributions=paramater_grid,
-                            scoring=score,
+                            scoring=make_scorer(correlation_scorer, greater_is_better=True),
                             cv=5,
                             verbose=3,
                             n_iter=n_iter,
@@ -169,9 +177,9 @@ def train_test_loop_baseline(models,
         paramater_grid = ml_param_grid[model_name]
 
         for i in tqdm(range(0, len(y_train_list))):
-            run_results = regression_grid_train_test_report(
-                model, x_train, y_train_list[i], x_val, x_test, y_test_list[i],
-                paramater_grid, cv, method)
+            run_results = regression_grid_train_test_report(model_name,
+                model, x_train, y_train_list[i], x_test, y_test_list[i],
+                paramater_grid, cv, method, x_val=x_val)
             # predictions are on the validation data for ensembling
             # performance is on the test data
             frame, r, y_pred_val, construct, y_pred_test = run_results['frame'], run_results['r'], run_results['y_val_pred'] , run_results['construct'], run_results['y_test_pred']
@@ -182,10 +190,10 @@ def train_test_loop_baseline(models,
             construct_list.append(construct)
         
         val_pred_df = pd.DataFrame(val_predictions)
-        val_pred_df.to_csv(f'{save_dir}_valid_predictions.csv')
+        val_pred_df.to_csv(f'{save_dir}_{model_name}_valid_predictions.csv')
         
         test_pred_df = pd.DataFrame(test_predictions)
-        test_pred_df.to_csv(f'{save_dir}_test_predictions.csv')
+        test_pred_df.to_csv(f'{save_dir}_{model_name}_test_predictions.csv')
 
     output = pd.concat(dfs)
 
