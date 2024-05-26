@@ -6,7 +6,8 @@ import pandas as pd
 import ast
 
 
-def r_confidence_interval(r, n):
+def r_confidence_interval(r, n = 300):
+
     """
   r: corr
   n: size
