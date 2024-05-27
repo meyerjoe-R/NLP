@@ -1,0 +1,6 @@
+Unnamed: 0.1,Unnamed: 0,construct,method,model_name,r,95% CI
+75,,A_Scale_score,lstm,lstm,0.0806544874115757,"[-0.03, 0.19]"
+76,,C_Scale_score,lstm,lstm,0.0942723448704404,"[-0.02, 0.21]"
+77,,E_Scale_score,lstm,lstm,-0.0562901059427864,"[-0.17, 0.06]"
+78,,N_Scale_score,lstm,lstm,0.0052860883865683,"[-0.11, 0.12]"
+79,,O_Scale_score,lstm,lstm,-0.0029382347504771,"[-0.12, 0.11]"

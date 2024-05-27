@@ -17,6 +17,3 @@ catboost_info/
 
 # Ignore __pycache__ directory in dissertation and all its contents
 dissertation/__pycache__/
-
-# models are in here
-results/
