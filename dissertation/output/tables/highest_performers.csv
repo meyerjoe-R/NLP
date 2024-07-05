@@ -1,0 +1,6 @@
+,Unnamed: 0.1,Unnamed: 0,construct,method,model_name,r,95% CI
+0,105,0.0,A_Scale_score,ensemble,ElasticNet,0.33,"[0.23, 0.43]"
+1,71,,C_Scale_score,transformer,google-bigbird-roberta-base_transformer,0.21,"[0.1, 0.31]"
+2,107,0.0,E_Scale_score,ensemble,ElasticNet,0.35,"[0.25, 0.45]"
+3,88,,N_Scale_score,transformer,microsoft-deberta-v3-large_transformer,0.26,"[0.15, 0.37]"
+4,89,,O_Scale_score,transformer,microsoft-deberta-v3-large_transformer,0.23,"[0.12, 0.34]"

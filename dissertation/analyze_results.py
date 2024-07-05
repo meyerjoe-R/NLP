@@ -13,15 +13,18 @@ column_mapping = {
     'y_O_val': "O_Scale_score"
 }
 
-def get_highest_r_by_construct(file_path):
+def get_highest_r_by_construct(file_path, output_file = 'dissertation/output/tables/highest_performers.csv'):
     # Read the CSV file into a DataFrame
     df = pd.read_csv(file_path)
     
     # Group by 'construct' and find the row with the highest 'r' for each group
     highest_r_df = df.loc[df.groupby('construct')['r'].idxmax()].reset_index(drop=True)
-    average_r = highest_r_df['r'].mean()
+    highest_r_df['r'] = round(highest_r_df['r'], 2)
+    average_r = round(highest_r_df['r'].mean(), 2)
     print(f'average r: {average_r}')
     print(highest_r_df)
+    highest_r_df.to_csv(output_file)
+    print(f'saved to highest_r_df')
     return highest_r_df
 
 def convert_wide_to_long(df, model_name):
@@ -73,9 +76,10 @@ def concatenate_test_files(directory_path, output_dir='dissertation/output/resul
 def plot_average_performance(file_path, output_dir, group_by_column, y_lim=(0, 1)):
     """
     Plots the average performance by a specified column and saves the plot as a .png file.
+    Additionally, saves the grouped data as a .csv file.
     
     :param file_path: Path to the input CSV file.
-    :param output_dir: Directory where the plot will be saved.
+    :param output_dir: Directory where the plot and CSV file will be saved.
     :param group_by_column: Column name to group by for calculating average performance.
     :param y_lim: Tuple specifying the y-axis limits. Default is (0, 1).
     """
@@ -85,7 +89,8 @@ def plot_average_performance(file_path, output_dir, group_by_column, y_lim=(0, 1
     # Remove any unnamed columns that are unnecessary
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
     
-    if group_by_column != 'method':
+    # conflates base model and meta models
+    if group_by_column == 'model_name':
         df = df[[col for col in df.columns if 'method' not in col]]
     
     # Extract and calculate the bounds of the 95% CI
@@ -101,6 +106,11 @@ def plot_average_performance(file_path, output_dir, group_by_column, y_lim=(0, 1
     # Calculate the error bars (distance from the mean 'r' to the average bounds)
     grouped['ci_error_low'] = grouped['r'] - grouped['ci_low']
     grouped['ci_error_high'] = grouped['ci_high'] - grouped['r']
+    
+    # Save the grouped data to a CSV file
+    csv_output_file = os.path.join(output_dir, f'grouped_data_by_{group_by_column}.csv')
+    grouped.to_csv(csv_output_file, index=False)
+    print(f'Grouped data saved to {csv_output_file}')
     
     # Determine plot settings based on the number of categories
     num_categories = len(grouped[group_by_column])
@@ -146,7 +156,6 @@ def plot_average_performance(file_path, output_dir, group_by_column, y_lim=(0, 1
     plt.close()
 
     print(f'Plot saved to {output_file}')
-    
 
 def save_grouped_dataframes(file_path, output_dir, group_by_column):
     """
@@ -176,13 +185,15 @@ def save_grouped_dataframes(file_path, output_dir, group_by_column):
 def main(output_dir='dissertation/output/results',
          directory_path = 'dissertation/output', 
          results_path = 'dissertation/output/results/concatenated_results.csv', create_concatenated_data = False, add_CI = False,
-        plot_average_by_construct=False,
-        save_separate_dataframes = True):
+        plot_average_by_construct=True,
+        save_separate_dataframes = False):
     
+    
+    get_highest_r_by_construct(results_path)
+
     # create concatenated results across all models and constructs
     if create_concatenated_data:
         concatenate_test_files(directory_path)
-        get_highest_r_by_construct(results_path)
         
     if add_CI:
         # add in confidence intervals
