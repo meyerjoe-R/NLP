@@ -46,7 +46,6 @@ def prepare_dataset(data, tokenizer):
     dataset = Dataset.from_dict(data)
     tokenized_dataset = dataset.map(tokenize_function, batched=True)
     tokenized_dataset = tokenized_dataset.rename_column("rating", "labels")
-    tokenized_dataset = tokenized_dataset.remove_columns(["text"])
     return tokenized_dataset
 
 def split_dataset(dataset, train_ratio=0.8, val_ratio=0.1):
@@ -105,7 +104,7 @@ def compute_metrics(eval_pred):
 def train_model(train_dataset, val_dataset, test_dataset, model_name):
     """Train the model on the dataset."""
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1).to(device)
-    output_dir = "./results_reviews"
+    output_dir = "/opt/dlami/nvme/results_reviews"
     os.makedirs(output_dir, exist_ok=True)
 
     training_args = TrainingArguments(
@@ -113,9 +112,11 @@ def train_model(train_dataset, val_dataset, test_dataset, model_name):
         evaluation_strategy="epoch",
         save_strategy="epoch",
         num_train_epochs=5,
-        per_device_train_batch_size=16,
+        per_device_train_batch_size=32,
         per_device_eval_batch_size=16,
+        gradient_accumulation_steps=2,
         max_steps=-1,
+        save_total_limit=1,
         logging_dir=f"{output_dir}/logs",
         load_best_model_at_end=True,
         metric_for_best_model="mae",

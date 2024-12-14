@@ -36,7 +36,7 @@ def compute_metrics(eval_pred):
 def train_sts_model(train_dataset, val_dataset, test_dataset, model_name):
     """Train a model for STS Benchmark."""
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1).to(device)
-    output_dir = "./results_sts"
+    output_dir = "./transformer_results_sts"
     os.makedirs(output_dir, exist_ok=True)
 
     training_args = TrainingArguments(
